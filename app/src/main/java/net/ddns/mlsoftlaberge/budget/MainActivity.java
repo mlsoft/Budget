@@ -21,6 +21,7 @@ import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
 import net.ddns.mlsoftlaberge.budget.products.ProductDetailFragment;
 import net.ddns.mlsoftlaberge.budget.products.ProductsListFragment;
 import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
+import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
 import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
 
 public class MainActivity extends AppCompatActivity
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         // initiate the first menu item as auto-selected
-        sensorfragment();
+        discussionfragment();
     }
 
     @Override
@@ -117,6 +118,8 @@ public class MainActivity extends AppCompatActivity
             notesfragment();
         } else if (id == R.id.nav_sensor) {
             sensorfragment();
+        } else if (id == R.id.nav_discussion) {
+            discussionfragment();
         } else if (id == R.id.nav_budget) {
             budgetfragment();
         } else if (id == R.id.nav_contactslist) {
@@ -143,6 +146,7 @@ public class MainActivity extends AppCompatActivity
     private NotesFragment notesFragment = null;
     private BudgetFragment budgetFragment = null;
     private SensorFragment sensorFragment = null;
+    private DiscussionFragment discussionFragment = null;
     private ContactsListFragment contactslistFragment = null;
     private ContactAdminFragment contactadminFragment = null;
     private ProductsListFragment inventoryFragment = null;
@@ -353,6 +357,26 @@ public class MainActivity extends AppCompatActivity
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.main_content, sensorFragment).commit();
         currentfragment = 7;
+    }
+
+
+    // =====================================================================================
+    // sensor fragment incorporation in the display
+    public void discussionfragment() {
+        setTitle("Discussion Fragment");
+
+        if (discussionFragment == null) {
+            // Create a new Fragment to be placed in the activity layout
+            discussionFragment = new DiscussionFragment();
+            // In case this activity was started with special instructions from an
+            // Intent, pass the Intent's extras to the fragment as arguments
+            discussionFragment.setArguments(getIntent().getExtras());
+        }
+
+        // Add the fragment to the 'fragment_container' FrameLayout
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main_content, discussionFragment).commit();
+        currentfragment = 8;
     }
 
 

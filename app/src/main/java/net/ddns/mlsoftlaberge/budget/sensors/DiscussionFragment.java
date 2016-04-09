@@ -7,7 +7,9 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -26,7 +28,7 @@ import java.util.Locale;
 /**
  * Created by mlsoft on 05/04/16.
  */
-public class SensorFragment extends Fragment {
+public class DiscussionFragment extends Fragment implements RecognitionListener {
 
     private static final int REQUEST_CODE = 1234;
     Button Start;
@@ -36,7 +38,7 @@ public class SensorFragment extends Fragment {
     TextToSpeech t1;
     StringBuffer discuss;
 
-    public SensorFragment() {
+    public DiscussionFragment() {
     }
 
     @Override
@@ -140,7 +142,7 @@ public class SensorFragment extends Fragment {
             if(monnom.contains("Jacinthe")) {
                 Speech.setText(monnom + " est mon namie");
             } else if(monnom.contains("Martin")) {
-                    Speech.setText(monnom + " est mon maître" );
+                Speech.setText(monnom + " est mon maître" );
             } else if(monnom.contains("Guy")) {
                 Speech.setText(monnom + " est pas mal phoqué" );
             } else if(monnom.contains("Pierre")) {
