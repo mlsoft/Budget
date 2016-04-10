@@ -34,7 +34,7 @@ import java.util.TimerTask;
 /**
  * Created by mlsoft on 05/04/16.
  */
-public class DiscussionFragment extends Fragment implements RecognitionListener {
+public class ConversationFragment extends Fragment implements RecognitionListener {
 
     private static final int REQUEST_CODE = 1234;
     Button Start;
@@ -52,12 +52,12 @@ public class DiscussionFragment extends Fragment implements RecognitionListener 
     boolean islistening;
 
 
-    public DiscussionFragment() {
+    public ConversationFragment() {
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.discussion_fragment, container, false);
+        View view = inflater.inflate(R.layout.conversation_fragment, container, false);
 
         Start = (Button) view.findViewById(R.id.start_rec);
         Speech = (TextView) view.findViewById(R.id.speech);
@@ -187,108 +187,44 @@ public class DiscussionFragment extends Fragment implements RecognitionListener 
     }
 
     // =================================================================================
-    // listener for the speech recognition service
+    // sentence recognition and appropriate response
+
+    public class Matcher {
+        String lang;
+        String match;
+        String response;
+    }
+
+    Matcher mMatcher[] = new Matcher[50];
+    final int MAXMATCHER = 50;
+    int nbmatcher =0;
 
 
     public void processvoice(String voiceorig) {
+        if(nbmatcher==0) loadmatcher();
         String voice = voiceorig.toLowerCase();
-        if (voice.contains("test")) {
-            speak("moi aussi je test");
-
-        } else if (voice.contains("what")) {
-            t1.setLanguage(Locale.US);
-            speak("It is whatever you want.");
-            t1.setLanguage(Locale.FRENCH);
-
-        } else if (voice.contains("who")) {
-            t1.setLanguage(Locale.US);
-            speak("It is who you know.");
-            t1.setLanguage(Locale.FRENCH);
-
-        } else if (voice.contains("when")) {
-            t1.setLanguage(Locale.US);
-            speak("It is when you want.");
-            t1.setLanguage(Locale.FRENCH);
-
-        } else if (voice.contains("salut")) {
-            String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
-            if(monnom.contains("android")) {
-                speak("Salut maître.");
-            } else {
-                speak("Je m'appelle pas " + monnom);
+        for(int i=0;i<nbmatcher;++i) {
+            if(voice.contains(mMatcher[i].match)) {
+                String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
+                String tospeak = String.format(mMatcher[i].response,monnom);
+                speak(tospeak);
+                break;
             }
-
-        } else if (voice.contains("tabarnak")) {
-            speak("Sacre pas apres moi, mon nesti");
-
-        } else if (voice.contains("dis bonjour à mon ami")) {
-            speak("Bonjour jacynthe");
-
-        } else if (voice.contains("dis bonjour à mon père")) {
-            speak("Bonjour Jean Pierre Laberge");
-
-        } else if (voice.contains("dis bonjour à ma mère")) {
-            speak("Bonjour Raymonde Laberge");
-
-        } else if (voice.contains("dis bonjour à")) {
-            String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
-            speak("Bonjour " + monnom);
-
-        } else if (voice.contains("comment ça va")) {
-            speak("ça va bien merci");
-
-        } else if (voice.contains("fuck")) {
-            speak("tu peux te le mettre dans le cul");
-
-        } else if (voice.contains("phoque")) {
-            speak("Ça vaut pas la peine de laisser ceux qu'on aime, pour aller faire tourner un ballon sur son nez");
-
-        } else if (voice.contains("merci")) {
-            speak("Bienvenue maître. Tu est le plus grand.");
-
-        } else if (voice.contains("je m'appelle")) {
-            String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
-            speak("enchanté de te connaitre " + monnom);
-
-        } else if (voice.contains("identifie")) {
-            String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
-            if (monnom.contains("jacinthe")) {
-                speak(monnom + " est mon namie");
-            } else if (monnom.contains("martin")) {
-                speak(monnom + " est mon maître");
-            } else if (monnom.contains("guy")) {
-                speak(monnom + " est pas mal phoqué");
-            } else if (monnom.contains("pierre")) {
-                speak(monnom + " est en prison");
-            } else {
-                speak("Je ne connais pas " + monnom);
-            }
-
-        } else if (voice.contains("pierre")) {
-            if(voice.contains("pinotte")) {
-                speak("Pierre a jamais vendu de pinotte de toute sa vie, voyons donc.");
-            } else if(voice.contains("drogue") || voice.contains("drug")) {
-                    speak("Pierre a jamais vendu de drogue de toute sa vie. Voyons donc.");
-            } else {
-                speak("Pierre est dans le trouble");
-            }
-
-        } else if (voice.contains("drogue")) {
-            speak("oublie pas la bière et le sexe");
-
-        } else if (voice.contains("quitter")) {
-            getActivity().finish();
-
-        } else {
-            speak(voice + ". Réponse inconnue.");
         }
+    }
 
-        //discuss.setLength(0);
-        //discuss.append(voice);
-        //discuss.append("\n");
-        //discuss.append(Speech.getText());
-        //discuss.append("\n");
-        //Discussion.setText(discuss);
+    public void loadmatcher() {
+        setmatcher("FR","je m'appelle","salut, %s. mon bon ami.");
+        setmatcher("FR","phoque","ça vaut pas la peine");
+        setmatcher("EN","fuck","go shit yourself");
+    }
+
+    public void setmatcher(String lan, String mat, String res) {
+        if(nbmatcher>=MAXMATCHER) return;
+        mMatcher[nbmatcher].lang=lan;
+        mMatcher[nbmatcher].match=mat;
+        mMatcher[nbmatcher].response=res;
+        nbmatcher++;
     }
 
 }

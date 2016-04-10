@@ -1,0 +1,4 @@
+FR,,Inconnu.
+EN,,Unknown.
+FR,bonjour,Bonne journée
+EN,fuck,you can go shit yourself
