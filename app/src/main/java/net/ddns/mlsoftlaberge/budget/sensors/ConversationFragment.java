@@ -40,6 +40,7 @@ public class ConversationFragment extends Fragment implements RecognitionListene
     Button Start;
     TextView Speech;
     TextView Discussion;
+    TextView Status;
     ArrayList<String> matches_text;
     TextToSpeech t1;
     StringBuffer discuss;
@@ -62,6 +63,8 @@ public class ConversationFragment extends Fragment implements RecognitionListene
         Start = (Button) view.findViewById(R.id.start_rec);
         Speech = (TextView) view.findViewById(R.id.speech);
         Discussion = (TextView) view.findViewById(R.id.discussion);
+        Status = (TextView) view.findViewById(R.id.status);
+
         discuss = new StringBuffer();
 
         t1 = new TextToSpeech(getContext(), new TextToSpeech.OnInitListener() {
@@ -76,18 +79,25 @@ public class ConversationFragment extends Fragment implements RecognitionListene
         Start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                speak("Parlez");
+                //t1.setLanguage(Locale.FRENCH);
+                //speak("Parlez");
                 listen();
             }
         });
 
         mAudioManager = (AudioManager) getActivity().getSystemService(Context.AUDIO_SERVICE);
+
         mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
         mSpeechRecognizer.setRecognitionListener(this);
         mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
+        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
+        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3);
+        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE,true);
+        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,1000);
+        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,1000);
+
         //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, true);
 
         mTimer = new Timer();
@@ -153,6 +163,7 @@ public class ConversationFragment extends Fragment implements RecognitionListene
     @Override
     public void onError(int error) {
         islistening=false;
+        //Status.setText("Status: " + error);
     }
 
     @Override
@@ -174,11 +185,20 @@ public class ConversationFragment extends Fragment implements RecognitionListene
     public void onResults(Bundle results) {
         islistening=false;
         ArrayList<String> dutexte = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        float duconf[] = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
         if (dutexte != null && dutexte.size() > 0) {
             Speech.setText(dutexte.get(0));
+            discuss.setLength(0);
+            for(int i=0;i<dutexte.size();++i) {
+                discuss.append(dutexte.get(i));
+                discuss.append(String.format(" %f",duconf[i]));
+                discuss.append("\n");
+            }
+            Discussion.setText(discuss);
+            Discussion.invalidate();
             processvoice(dutexte.get(0));
         }
-        listen();
+        //listen();
     }
 
     @Override
@@ -195,35 +215,61 @@ public class ConversationFragment extends Fragment implements RecognitionListene
         String response;
     }
 
-    Matcher mMatcher[] = new Matcher[50];
+    Matcher mMatcher[];
     final int MAXMATCHER = 50;
     int nbmatcher =0;
 
 
     public void processvoice(String voiceorig) {
         if(nbmatcher==0) loadmatcher();
+        int i;
         String voice = voiceorig.toLowerCase();
-        for(int i=0;i<nbmatcher;++i) {
+        for(i=0;i<nbmatcher;++i) {
             if(voice.contains(mMatcher[i].match)) {
+                if(mMatcher[i].lang.contains("FR")) {
+                    t1.setLanguage(Locale.FRENCH);
+                } else {
+                    t1.setLanguage(Locale.US);
+                }
                 String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
                 String tospeak = String.format(mMatcher[i].response,monnom);
                 speak(tospeak);
                 break;
             }
         }
+        if(i>=nbmatcher) {
+            t1.setLanguage(Locale.FRENCH);
+            speak(voice);
+        }
     }
 
     public void loadmatcher() {
+        mMatcher=new Matcher[MAXMATCHER];
+        nbmatcher=0;
+        setmatcher("FR","french","Certainement Maître.");
+        setmatcher("EN","english","Certainly Master.");
+
         setmatcher("FR","je m'appelle","salut, %s. mon bon ami.");
         setmatcher("FR","phoque","ça vaut pas la peine");
+        setmatcher("FR","bonjour","bonjour monsieur");
+        setmatcher("FR","salut","salut toi même");
+        setmatcher("FR","pierre","Pierre est dans le gros trouble");
+        setmatcher("FR","oui","Bien moi aussi");
+        setmatcher("FR","non","Je te cré pas");
         setmatcher("EN","fuck","go shit yourself");
+        setmatcher("EN","what","something secret");
+        setmatcher("EN","who","someone you know");
+        setmatcher("EN","why","I dont know");
+        setmatcher("EN","when","very soon");
+        setmatcher("EN","where","not very far");
     }
 
     public void setmatcher(String lan, String mat, String res) {
         if(nbmatcher>=MAXMATCHER) return;
-        mMatcher[nbmatcher].lang=lan;
-        mMatcher[nbmatcher].match=mat;
-        mMatcher[nbmatcher].response=res;
+        mMatcher[nbmatcher]=new Matcher();
+        mMatcher[nbmatcher].lang=new String(lan);
+        mMatcher[nbmatcher].match=new String(mat);
+        mMatcher[nbmatcher].response=new String(res);
         nbmatcher++;
     }
 
