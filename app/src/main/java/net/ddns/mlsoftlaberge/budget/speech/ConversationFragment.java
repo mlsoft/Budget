@@ -1,4 +1,4 @@
-package net.ddns.mlsoftlaberge.budget.sensors;
+package net.ddns.mlsoftlaberge.budget.speech;
 
 import android.content.Context;
 import android.content.Intent;
@@ -22,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import net.ddns.mlsoftlaberge.budget.R;
-import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
 
 import java.io.BufferedReader;
 import java.io.File;

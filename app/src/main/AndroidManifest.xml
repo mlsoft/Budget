@@ -40,7 +40,8 @@
                  all Android versions. See the "Tasks and Back Stack" guide for more information:
                  http://developer.android.com/guide/components/tasks-and-back-stack.html
             -->
-            <meta-data android:name="android.support.PARENT_ACTIVITY"
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
         <activity
@@ -53,7 +54,8 @@
                  all Android versions. See the "Tasks and Back Stack" guide for more information:
                  http://developer.android.com/guide/components/tasks-and-back-stack.html
             -->
-            <meta-data android:name="android.support.PARENT_ACTIVITY"
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
         <activity
@@ -66,14 +68,131 @@
                  all Android versions. See the "Tasks and Back Stack" guide for more information:
                  http://developer.android.com/guide/components/tasks-and-back-stack.html
             -->
-            <meta-data android:name="android.support.PARENT_ACTIVITY"
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
 
         <provider
             android:name=".products.contentprovider.MyProductContentProvider"
-            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider" >
-        </provider>
+            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider"></provider>
+
+        <activity android:name=".trycorder.TrycorderActivity">
+            android:label="Trycorder Mode"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.LiveCameraActivity"
+            android:label="Camera Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.SmallCameraActivity"
+            android:label="Small Camera"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.GraphicActivity"
+            android:label="Graphic Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.CanvasActivity"
+            android:label="Canvas Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.BeepActivity"
+            android:label="Beep Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.MediaActivity"
+            android:label="Media Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.SensorsActivity"
+            android:label="Sensors Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.ViewActivity"
+            android:label="View Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.MagneticActivity"
+            android:label="Magnetic Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.IronActivity"
+            android:label="Iron Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.SpeakActivity"
+            android:label="Speak Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
+        <activity
+            android:name=".trycorder.ListenActivity"
+            android:label="Listen Mode"
+            android:parentActivityName=".trycorder.TrycorderActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".trycorder.TrycorderActivity" />
+        </activity>
+
 
     </application>
 

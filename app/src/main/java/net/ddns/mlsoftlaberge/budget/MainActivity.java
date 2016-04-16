@@ -23,9 +23,10 @@ import net.ddns.mlsoftlaberge.budget.notes.NotesEditFragment;
 import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
 import net.ddns.mlsoftlaberge.budget.products.ProductDetailFragment;
 import net.ddns.mlsoftlaberge.budget.products.ProductsListFragment;
-import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
-import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
-import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
+import net.ddns.mlsoftlaberge.budget.speech.ConversationFragment;
+import net.ddns.mlsoftlaberge.budget.speech.PerroquetFragment;
+import net.ddns.mlsoftlaberge.budget.speech.DiscussionFragment;
+import net.ddns.mlsoftlaberge.budget.trycorder.TrycorderActivity;
 import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
 import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
 
@@ -49,12 +50,14 @@ public class MainActivity extends AppCompatActivity
         //}
         super.onCreate(savedInstanceState);
 
+        // initialize defaults preferences once
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
-
+        // read the needed preferences for this module
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         defaultLanguage = sharedPref.getString("pref_key_default_language", "");
         defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
 
+        // load the initial screen
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -70,18 +73,28 @@ public class MainActivity extends AppCompatActivity
         });
         fab.setVisibility(View.GONE);
 
-
+        // initialize the drawer to switch between modules
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.setDrawerListener(toggle);
         toggle.syncState();
-
+        // initialize the navigation menu
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        // initiate the first menu item as auto-selected
-        conversationfragment();
+        // initiate the first menu item as auto-selected depending on settings
+        if(defaultFragment.equals("Conversation")) {
+            conversationfragment();
+        } else if(defaultFragment.equals("Contacts")) {
+            contactslistfragment();
+        } else if(defaultFragment.equals("Products")) {
+            inventoryfragment();
+        } else if(defaultFragment.equals("Trycorder")) {
+            trycorderactivity();
+        } else {
+            budgetfragment();
+        }
     }
 
     @Override
@@ -131,8 +144,10 @@ public class MainActivity extends AppCompatActivity
         // choose the fragment to instantiate and connect to main content screen
         if (id == R.id.nav_notes) {
             notesfragment();
-        } else if (id == R.id.nav_sensor) {
-            sensorfragment();
+        } else if (id == R.id.nav_perroquet) {
+            perroquetfragment();
+        } else if (id == R.id.nav_trycorder) {
+            trycorderactivity();
         } else if (id == R.id.nav_discussion) {
             discussionfragment();
         } else if (id == R.id.nav_conversation) {
@@ -162,7 +177,7 @@ public class MainActivity extends AppCompatActivity
     // fragments holders to keep them in memory
     private NotesFragment notesFragment = null;
     private BudgetFragment budgetFragment = null;
-    private SensorFragment sensorFragment = null;
+    private PerroquetFragment perroquetFragment = null;
     private DiscussionFragment discussionFragment = null;
     private ConversationFragment conversationFragment = null;
     private ContactsListFragment contactslistFragment = null;
@@ -359,27 +374,27 @@ public class MainActivity extends AppCompatActivity
     // =====================================================================================
 
     // =====================================================================================
-    // sensor fragment incorporation in the display
-    public void sensorfragment() {
-        setTitle("Sensor Fragment");
+    // perroquet fragment incorporation in the display
+    public void perroquetfragment() {
+        setTitle("Perroquet Fragment");
 
-        if (sensorFragment == null) {
+        if (perroquetFragment == null) {
             // Create a new Fragment to be placed in the activity layout
-            sensorFragment = new SensorFragment();
+            perroquetFragment = new PerroquetFragment();
             // In case this activity was started with special instructions from an
             // Intent, pass the Intent's extras to the fragment as arguments
-            sensorFragment.setArguments(getIntent().getExtras());
+            perroquetFragment.setArguments(getIntent().getExtras());
         }
 
         // Add the fragment to the 'fragment_container' FrameLayout
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.main_content, sensorFragment).commit();
+                .replace(R.id.main_content, perroquetFragment).commit();
         currentfragment = 7;
     }
 
 
     // =====================================================================================
-    // sensor fragment incorporation in the display
+    // discussion fragment incorporation in the display
     public void discussionfragment() {
         setTitle("Discussion Fragment");
 
@@ -398,7 +413,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     // =====================================================================================
-    // sensor fragment incorporation in the display
+    // conversation fragment incorporation in the display
     public void conversationfragment() {
         setTitle("Conversation Fragment");
 
@@ -420,6 +435,13 @@ public class MainActivity extends AppCompatActivity
     // settings activity incorporation in the display
     public void settingsactivity() {
         Intent i = new Intent(this, SettingsActivity.class);
+        startActivity(i);
+    }
+
+    // =====================================================================================
+    // trycorder activity incorporation in the display
+    public void trycorderactivity() {
+        Intent i = new Intent(this, TrycorderActivity.class);
         startActivity(i);
     }
 

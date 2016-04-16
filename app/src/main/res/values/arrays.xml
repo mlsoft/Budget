@@ -4,12 +4,16 @@
     <string-array name="fragment_array_entries">
         <item>Conversation</item>
         <item>Contacts</item>
+        <item>Products</item>
+        <item>Trycorder</item>
         <item>None</item>
     </string-array>
 
     <string-array name="fragment_array_entryvalues">
         <item>Conversation</item>
         <item>Contacts</item>
+        <item>Products</item>
+        <item>Trycorder</item>
         <item>None</item>
     </string-array>
 

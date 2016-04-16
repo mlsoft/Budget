@@ -1,6 +1,5 @@
-package net.ddns.mlsoftlaberge.budget.sensors;
+package net.ddns.mlsoftlaberge.budget.speech;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -14,7 +13,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,7 +24,7 @@ import java.util.Locale;
 /**
  * Created by mlsoft on 05/04/16.
  */
-public class SensorFragment extends Fragment {
+public class PerroquetFragment extends Fragment {
 
     private static final int REQUEST_CODE = 1234;
     Button Start;
@@ -36,7 +34,7 @@ public class SensorFragment extends Fragment {
     TextToSpeech t1;
     StringBuffer discuss;
 
-    public SensorFragment() {
+    public PerroquetFragment() {
     }
 
     @Override

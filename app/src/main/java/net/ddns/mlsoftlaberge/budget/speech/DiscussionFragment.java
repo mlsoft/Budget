@@ -1,35 +1,26 @@
-package net.ddns.mlsoftlaberge.budget.sensors;
+package net.ddns.mlsoftlaberge.budget.speech;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
-import android.speech.RecognizerResultsIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import net.ddns.mlsoftlaberge.budget.R;
 
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by mlsoft on 05/04/16.
