@@ -22,12 +22,14 @@ import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Contacts.Photo;
 import android.support.v4.app.Fragment;
@@ -116,6 +118,7 @@ public class ContactsListFragment extends ListFragment implements
 
     // keep the flag if we want starred filter or not
     private int starredfind=1;
+    private boolean starred=true;
 
     /**
      * Fragments require an empty constructor.
@@ -186,6 +189,12 @@ public class ContactsListFragment extends ListFragment implements
 
         // Add a cache to the image loader
         mImageLoader.addImageCache(getActivity().getSupportFragmentManager(), 0.1f);
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        starred = sharedPref.getBoolean("pref_key_starred",true);
+        if(starred) starredfind=1;
+        else starredfind=0;
+
     }
 
     @Override

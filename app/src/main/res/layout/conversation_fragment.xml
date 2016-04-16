@@ -13,23 +13,96 @@
         android:text="Speak" />
 
     <TextView
-        android:id="@+id/speech"
+        android:id="@+id/error"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text=""
-        android:textSize="18sp" />
-
-    <TextView
-        android:id="@+id/discussion"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="" />
+        android:text="Error:" />
 
     <TextView
         android:id="@+id/status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Status:" />
+
+    <EditText
+        android:id="@+id/speech"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Last Speech"
+        android:hint="Last speech"
+        android:textSize="18sp" />
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/speak"
+        android:text="Answer to Speak"
+        android:textSize="18sp" />
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/set_question"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set Question"
+            />
+
+        <TextView
+            android:id="@+id/last_question"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Last Question"
+             />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/set_answer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" Set Answer  "
+            />
+
+        <TextView
+            android:id="@+id/last_answer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Last Answer"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/save_table"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="  Save Table  "
+            />
+
+        <TextView
+            android:id="@+id/stat_table"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save Status"
+            />
+    </LinearLayout>
+
 
 </LinearLayout>

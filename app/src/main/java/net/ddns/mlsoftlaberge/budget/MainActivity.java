@@ -1,7 +1,10 @@
 package net.ddns.mlsoftlaberge.budget;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.view.View;
@@ -24,6 +27,7 @@ import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
 import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
 import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
 import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
+import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
 
 public class MainActivity extends AppCompatActivity
         implements ContactsListFragment.OnContactsInteractionListener,
@@ -35,6 +39,8 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "MainActivity";
 
+    private String defaultLanguage;
+    private String defaultFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +48,13 @@ public class MainActivity extends AppCompatActivity
         //    Utils.enableStrictMode();
         //}
         super.onCreate(savedInstanceState);
+
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        defaultLanguage = sharedPref.getString("pref_key_default_language", "");
+        defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -103,6 +116,7 @@ public class MainActivity extends AppCompatActivity
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            settingsactivity();
             return true;
         }
 
@@ -400,6 +414,13 @@ public class MainActivity extends AppCompatActivity
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.main_content, conversationFragment).commit();
         currentfragment = 9;
+    }
+
+    // =====================================================================================
+    // settings activity incorporation in the display
+    public void settingsactivity() {
+        Intent i = new Intent(this, SettingsActivity.class);
+        startActivity(i);
     }
 
 
