@@ -14,6 +14,9 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -22,6 +25,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import net.ddns.mlsoftlaberge.budget.R;
+import net.ddns.mlsoftlaberge.budget.contacts.ContactEditMemoActivity;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -69,6 +73,13 @@ public class ConversationFragment extends Fragment implements RecognitionListene
     String listenLanguage;
 
     public ConversationFragment() {
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Let this fragment contribute menu items
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -165,6 +176,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
     @Override
     public void onResume() {
         super.onResume();
+    }
+
+    // create the menu option to list the conversation tokens
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        // Inflates the options menu for this fragment
+        inflater.inflate(R.menu.conversation_list_menu, menu);
+    }
+
+    // open the list of the conversation tokens when selected by menu
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // When "list" menu option selected
+            case R.id.menu_list_conversation:
+                Intent intent = new Intent(getActivity(), ConversationListActivity.class);
+                startActivity(intent);
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
 
