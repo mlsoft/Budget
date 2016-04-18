@@ -7,6 +7,11 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -34,14 +39,34 @@ public class MainActivity extends AppCompatActivity
         implements ContactsListFragment.OnContactsInteractionListener,
         ProductsListFragment.OnProductsInteractionListener,
         ProductDetailFragment.OnProductsInteractionListener,
-        NavigationView.OnNavigationItemSelectedListener ,
-        NotesFragment.OnNoteListener, 
+        NavigationView.OnNavigationItemSelectedListener,
+        NotesFragment.OnNoteListener,
         NotesEditFragment.OnNoteListener {
 
     private static final String TAG = "MainActivity";
 
+    // preferences values loaded at start
+    private boolean tabbedMode;
     private String defaultLanguage;
     private String defaultFragment;
+
+    /**
+     * The {@link android.support.v4.view.PagerAdapter} that will provide
+     * fragments for each of the sections. We use a
+     * {@link FragmentPagerAdapter} derivative, which will keep every
+     * loaded fragment in memory. If this becomes too memory intensive, it
+     * may be best to switch to a
+     * {@link android.support.v4.app.FragmentStatePagerAdapter}.
+     */
+    private SectionsPagerAdapter mSectionsPagerAdapter;
+
+    /**
+     * The {@link ViewPager} that will host the section contents.
+     */
+    private ViewPager mViewPager;
+
+
+    private TabLayout tabLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,11 +81,42 @@ public class MainActivity extends AppCompatActivity
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         defaultLanguage = sharedPref.getString("pref_key_default_language", "");
         defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
+        tabbedMode = sharedPref.getBoolean("pref_key_tabbed_mode", false);
 
-        // load the initial screen
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        if (tabbedMode) {
+            // load the initial screen in tabbed mode
+            setContentView(R.layout.activity_main_tab);
+            Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+            setSupportActionBar(toolbar);
+
+            // Create the adapter that will return a fragment for each of the three
+            // primary sections of the activity.
+            mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
+
+            // Set up the ViewPager with the sections adapter.
+            mViewPager = (ViewPager) findViewById(R.id.container);
+            mViewPager.setAdapter(mSectionsPagerAdapter);
+
+            tabLayout = (TabLayout) findViewById(R.id.tabs);
+            tabLayout.setupWithViewPager(mViewPager);
+
+
+        } else {
+            // load the initial screen in drawer mode
+            setContentView(R.layout.activity_main);
+            Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+            setSupportActionBar(toolbar);
+
+            // initialize the drawer to switch between modules
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                    this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+            drawer.setDrawerListener(toggle);
+            toggle.syncState();
+            // initialize the navigation menu
+            NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+            navigationView.setNavigationItemSelectedListener(this);
+        }
 
         // prepare a floating button, but hide it for later purpose
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -73,32 +129,142 @@ public class MainActivity extends AppCompatActivity
         });
         fab.setVisibility(View.GONE);
 
-        // initialize the drawer to switch between modules
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-        // initialize the navigation menu
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
         // initiate the first menu item as auto-selected depending on settings
-        if(defaultFragment.equals("Conversation")) {
-            conversationfragment();
-        } else if(defaultFragment.equals("Contacts")) {
-            contactslistfragment();
-        } else if(defaultFragment.equals("Products")) {
-            inventoryfragment();
-        } else if(defaultFragment.equals("Trycorder")) {
-            trycorderactivity();
+        if(tabbedMode) {
+            if (defaultFragment.equals("Conversation")) {
+                mViewPager.setCurrentItem(2);
+            } else if (defaultFragment.equals("Contacts")) {
+                mViewPager.setCurrentItem(5);
+            } else if (defaultFragment.equals("Products")) {
+                mViewPager.setCurrentItem(7);
+            } else if (defaultFragment.equals("Trycorder")) {
+                trycorderactivity();
+            } else {
+                mViewPager.setCurrentItem(0);
+            }
         } else {
-            budgetfragment();
+            if (defaultFragment.equals("Conversation")) {
+                conversationfragment();
+            } else if (defaultFragment.equals("Contacts")) {
+                contactslistfragment();
+            } else if (defaultFragment.equals("Products")) {
+                inventoryfragment();
+            } else if (defaultFragment.equals("Trycorder")) {
+                trycorderactivity();
+            } else {
+                budgetfragment();
+            }
         }
     }
 
+    // =====================================================================================
+    // section for tabbed mode
+    // =====================================================================================
+
+    /**
+     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
+     * one of the sections/tabs/pages.
+     */
+    public class SectionsPagerAdapter extends FragmentPagerAdapter {
+
+        public SectionsPagerAdapter(FragmentManager fm) {
+            super(fm);
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            // getItem is called to instantiate the fragment for the given page.
+            // Return a PlaceholderFragment (defined as a static inner class below).
+            if(position==0) {
+                budgetFragment = new BudgetFragment();
+                return budgetFragment;
+            } else if(position==1) {
+                notesFragment = new NotesFragment();
+                return notesFragment;
+            } else if(position==2) {
+                conversationFragment = new ConversationFragment();
+                return conversationFragment;
+            } else if(position==3) {
+                discussionFragment = new DiscussionFragment();
+                return discussionFragment;
+            } else if(position==4) {
+                perroquetFragment = new PerroquetFragment();
+                return perroquetFragment;
+            } else if(position==5) {
+                contactslistFragment = new ContactsListFragment();
+                return contactslistFragment;
+            } else if(position==6) {
+                contactadminFragment = new ContactAdminFragment();
+                return contactadminFragment;
+            } else if(position==7) {
+                inventoryFragment = new ProductsListFragment();
+                return inventoryFragment;
+            } else if(position==8) {
+                productdetailFragment = new ProductDetailFragment();
+                return productdetailFragment;
+            }
+            budgetFragment = new BudgetFragment();
+            return budgetFragment;
+        }
+
+        @Override
+        public int getCount() {
+            // Show 9 total pages.
+            return 9;
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            switch (position) {
+                case 0:
+                    return "Budget";
+                case 1:
+                    return "Notes";
+                case 2:
+                    return "Conversation";
+                case 3:
+                    return "Discussion";
+                case 4:
+                    return "Perroquet";
+                case 5:
+                    return "Contacts";
+                case 6:
+                    return "Client";
+                case 7:
+                    return "Inventaire";
+                case 8:
+                    return "Produit";
+            }
+            return null;
+        }
+    }
+
+    // =====================================================================================
+    // section common for drawer and tabbed modes
+    // =====================================================================================
+
+    // =====================================================================================
+    // fragments holders to keep them in memory
+    private NotesFragment notesFragment = null;
+    private BudgetFragment budgetFragment = null;
+    private PerroquetFragment perroquetFragment = null;
+    private DiscussionFragment discussionFragment = null;
+    private ConversationFragment conversationFragment = null;
+    private ContactsListFragment contactslistFragment = null;
+    private ContactAdminFragment contactadminFragment = null;
+    private ProductsListFragment inventoryFragment = null;
+    private ProductDetailFragment productdetailFragment = null;
+    private int currentfragment = 0;
+    private Uri currentcontacturi = null;
+    private Uri currentproducturi = null;
+
     @Override
     public void onBackPressed() {
+        if(tabbedMode) {
+            super.onBackPressed();
+            return;
+        }
+        // to do only in drawer mode
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
@@ -131,10 +297,130 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.action_settings) {
             settingsactivity();
             return true;
+        } else if (id == R.id.action_trycorder) {
+            trycorderactivity();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    // =====================================================================================
+    // callbacks of fragments to handle in the activity
+
+    // ================================== NOTES ========================================
+    // redisplay the list if a note has been modified
+    @Override
+    public void onNoteModified(long id) {
+        if (notesFragment != null) notesFragment.displayListView();
+    }
+
+    // do nothing if note selected
+    @Override
+    public void onNoteSelected(long id) {
+        // the edit fragment is called by the notesfragment
+    }
+
+    // ================================== ContactsList ========================================
+    /**
+     * This interface callback lets the main contacts list fragment notify
+     * this activity that a contact has been selected.
+     *
+     * @param contactUri The contact Uri to the selected contact.
+     */
+    @Override
+    public void onContactSelected(Uri contactUri) {
+        currentcontacturi=contactUri;
+        if(tabbedMode) {
+            mViewPager.setCurrentItem(6);
+            if(contactadminFragment!=null) contactadminFragment.setContact(currentcontacturi);
+        } else {
+            contactadminfragment(contactUri);
+        }
+    }
+
+    /**
+     * This interface callback lets the main contacts list fragment notify
+     * this activity that a contact is no longer selected.
+     */
+    @Override
+    public void onSelectionCleared() {
+
+    }
+
+    @Override
+    public boolean onSearchRequested() {
+        // Don't allow another search if this activity instance is already showing
+        // search results. Only used pre-HC.
+        return super.onSearchRequested();
+    }
+
+    // ================================== ProductsList ========================================
+    /**
+     * This interface callback lets the main contacts list fragment notify
+     * this activity that a contact has been selected.
+     *
+     * @param productUri The product Uri to the selected product.
+     */
+    @Override
+    public void onProductSelected(Uri productUri) {
+        currentproducturi=productUri;
+        if(tabbedMode) {
+            mViewPager.setCurrentItem(8);
+            if(productdetailFragment!=null) productdetailFragment.setProduct(currentproducturi);
+        } else {
+            productfragment(productUri);
+        }
+    }
+
+    /**
+     * This interface callback lets the main products list fragment notify
+     * this activity that a product is no longer selected.
+     */
+    @Override
+    public void onNewProductSelected() {
+        currentproducturi = null;
+        if(tabbedMode) {
+            mViewPager.setCurrentItem(8);
+            if(productdetailFragment!=null) productdetailFragment.setProduct(currentproducturi);
+        } else {
+            productfragment(null);
+        }
+    }
+
+    // ================================== ProductsDetail ========================================
+
+    /**
+     * This interface callback lets the main products list fragment notify
+     * this activity that a product is no longer selected.
+     */
+    @Override
+    public void onProductSaved() {
+        if(tabbedMode) {
+            mViewPager.setCurrentItem(7);
+        } else {
+            inventoryfragment();
+        }
+    }
+
+
+    // =====================================================================================
+    // settings activity incorporation in the display
+    public void settingsactivity() {
+        Intent i = new Intent(this, SettingsActivity.class);
+        startActivity(i);
+    }
+
+    // =====================================================================================
+    // trycorder activity incorporation in the display
+    public void trycorderactivity() {
+        Intent i = new Intent(this, TrycorderActivity.class);
+        startActivity(i);
+    }
+
+    // =====================================================================================
+    // section for navigation with a drawer
+    // =====================================================================================
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
@@ -174,21 +460,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     // =====================================================================================
-    // fragments holders to keep them in memory
-    private NotesFragment notesFragment = null;
-    private BudgetFragment budgetFragment = null;
-    private PerroquetFragment perroquetFragment = null;
-    private DiscussionFragment discussionFragment = null;
-    private ConversationFragment conversationFragment = null;
-    private ContactsListFragment contactslistFragment = null;
-    private ContactAdminFragment contactadminFragment = null;
-    private ProductsListFragment inventoryFragment = null;
-    private ProductDetailFragment productdetailFragment = null;
-    private int currentfragment = 0;
-    private Uri currentcontacturi = null;
-    private Uri currentproducturi = null;
-
-    // =====================================================================================
     // first fragment incorporation in the display
     public void notesfragment() {
         setTitle("Notes Fragment");
@@ -205,18 +476,6 @@ public class MainActivity extends AppCompatActivity
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.main_content, notesFragment).commit();
         currentfragment = 1;
-    }
-
-        // redisplay the list if a note has been modified
-    @Override
-    public void onNoteModified(long id) {
-        if(notesFragment!=null) notesFragment.displayListView();
-    }
-
-    // do nothing if note selected
-    @Override
-    public void onNoteSelected(long id) {
-        // the edit fragment is called by the notesfragment
     }
 
     // =====================================================================================
@@ -256,33 +515,6 @@ public class MainActivity extends AppCompatActivity
         currentfragment = 3;
     }
 
-    /**
-     * This interface callback lets the main contacts list fragment notify
-     * this activity that a contact has been selected.
-     *
-     * @param contactUri The contact Uri to the selected contact.
-     */
-    @Override
-    public void onContactSelected(Uri contactUri) {
-        contactadminfragment(contactUri);
-    }
-
-    /**
-     * This interface callback lets the main contacts list fragment notify
-     * this activity that a contact is no longer selected.
-     */
-    @Override
-    public void onSelectionCleared() {
-
-    }
-
-    @Override
-    public boolean onSearchRequested() {
-        // Don't allow another search if this activity instance is already showing
-        // search results. Only used pre-HC.
-        return super.onSearchRequested();
-    }
-
     // =====================================================================================
 
     public void contactadminfragment(Uri contactUri) {
@@ -318,27 +550,6 @@ public class MainActivity extends AppCompatActivity
         currentfragment = 5;
     }
 
-    /**
-     * This interface callback lets the main contacts list fragment notify
-     * this activity that a contact has been selected.
-     *
-     * @param productUri The product Uri to the selected product.
-     */
-    @Override
-    public void onProductSelected(Uri productUri) {
-        productfragment(productUri);
-    }
-
-    /**
-     * This interface callback lets the main products list fragment notify
-     * this activity that a product is no longer selected.
-     */
-    @Override
-    public void onNewProductSelected() {
-        currentproducturi=null;
-        productfragment(null);
-    }
-
     // =====================================================================================
 
     public void productfragment(Uri productUri) {
@@ -360,16 +571,6 @@ public class MainActivity extends AppCompatActivity
                 .replace(R.id.main_content, productdetailFragment, TAG).commit();
         currentfragment = 6;
     }
-
-    /**
-     * This interface callback lets the main products list fragment notify
-     * this activity that a product is no longer selected.
-     */
-    @Override
-    public void onProductSaved() {
-        inventoryfragment();
-    }
-
 
     // =====================================================================================
 
@@ -430,21 +631,6 @@ public class MainActivity extends AppCompatActivity
                 .replace(R.id.main_content, conversationFragment).commit();
         currentfragment = 9;
     }
-
-    // =====================================================================================
-    // settings activity incorporation in the display
-    public void settingsactivity() {
-        Intent i = new Intent(this, SettingsActivity.class);
-        startActivity(i);
-    }
-
-    // =====================================================================================
-    // trycorder activity incorporation in the display
-    public void trycorderactivity() {
-        Intent i = new Intent(this, TrycorderActivity.class);
-        startActivity(i);
-    }
-
 
 
 }

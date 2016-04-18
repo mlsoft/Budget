@@ -4,6 +4,11 @@
     <PreferenceCategory
         android:title="Module Main"
         android:key="pref_key_main_settings">
+        <CheckBoxPreference
+            android:key="pref_key_tabbed_mode"
+            android:summary="Activates the Tabs mode"
+            android:title="Tabbed Mode"
+            android:defaultValue="false" />
         <ListPreference
             android:key="pref_key_default_language"
             android:entries="@array/listen_array_entries"

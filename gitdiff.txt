@@ -1,1778 +1,2411 @@
-diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index 3b9e369..11ec7ff 100644
---- a/app/src/main/AndroidManifest.xml
-+++ b/app/src/main/AndroidManifest.xml
-@@ -72,6 +72,21 @@
-                 android:name="android.support.PARENT_ACTIVITY"
-                 android:value=".MainActivity" />
-         </activity>
-+        <activity
-+            android:name=".speech.ConversationListActivity"
-+            android:label="Conversation List"
-+            android:parentActivityName=".MainActivity">
-+            <!-- Define hierarchical parent of this activity, both via the system
-+                 parentActivityName attribute (added in API Level 16) and via meta-data annotation.
-+                 This allows use of the support library NavUtils class in a way that works over
-+                 all Android versions. See the "Tasks and Back Stack" guide for more information:
-+                 http://developer.android.com/guide/components/tasks-and-back-stack.html
-+            -->
-+            <meta-data
-+                android:name="android.support.PARENT_ACTIVITY"
-+                android:value=".MainActivity" />
-+        </activity>
-+
- 
-         <provider
-             android:name=".products.contentprovider.MyProductContentProvider"
-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
-index 60535bc..fde4b1d 100644
---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
-@@ -14,6 +14,9 @@ import android.speech.SpeechRecognizer;
- import android.speech.tts.TextToSpeech;
- import android.support.v4.app.Fragment;
- import android.view.LayoutInflater;
-+import android.view.Menu;
-+import android.view.MenuInflater;
-+import android.view.MenuItem;
+diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+index 987fe2c..bb90023 100644
+--- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
++++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+@@ -7,6 +7,11 @@ import android.os.Bundle;
+ import android.preference.PreferenceManager;
+ import android.support.design.widget.FloatingActionButton;
+ import android.support.design.widget.Snackbar;
++import android.support.design.widget.TabLayout;
++import android.support.v4.app.Fragment;
++import android.support.v4.app.FragmentManager;
++import android.support.v4.app.FragmentPagerAdapter;
++import android.support.v4.view.ViewPager;
  import android.view.View;
- import android.view.ViewGroup;
- import android.widget.Button;
-@@ -22,6 +25,7 @@ import android.widget.TextView;
- import android.widget.Toast;
+ import android.support.design.widget.NavigationView;
+ import android.support.v4.view.GravityCompat;
+@@ -34,15 +39,35 @@ public class MainActivity extends AppCompatActivity
+         implements ContactsListFragment.OnContactsInteractionListener,
+         ProductsListFragment.OnProductsInteractionListener,
+         ProductDetailFragment.OnProductsInteractionListener,
+-        NavigationView.OnNavigationItemSelectedListener ,
+-        NotesFragment.OnNoteListener, 
++        NavigationView.OnNavigationItemSelectedListener,
++        NotesFragment.OnNoteListener,
+         NotesEditFragment.OnNoteListener {
  
- import net.ddns.mlsoftlaberge.budget.R;
-+import net.ddns.mlsoftlaberge.budget.contacts.ContactEditMemoActivity;
+     private static final String TAG = "MainActivity";
  
- import java.io.BufferedReader;
- import java.io.File;
-@@ -72,6 +76,13 @@ public class ConversationFragment extends Fragment implements RecognitionListene
-     }
++    // preferences values loaded at start
++    private boolean tabbedMode;
+     private String defaultLanguage;
+     private String defaultFragment;
  
++    /**
++     * The {@link android.support.v4.view.PagerAdapter} that will provide
++     * fragments for each of the sections. We use a
++     * {@link FragmentPagerAdapter} derivative, which will keep every
++     * loaded fragment in memory. If this becomes too memory intensive, it
++     * may be best to switch to a
++     * {@link android.support.v4.app.FragmentStatePagerAdapter}.
++     */
++    private SectionsPagerAdapter mSectionsPagerAdapter;
++
++    /**
++     * The {@link ViewPager} that will host the section contents.
++     */
++    private ViewPager mViewPager;
++
++
++    private TabLayout tabLayout;
++
      @Override
-+    public void onCreate(Bundle savedInstanceState) {
-+        super.onCreate(savedInstanceState);
-+        // Let this fragment contribute menu items
-+        setHasOptionsMenu(true);
+     protected void onCreate(Bundle savedInstanceState) {
+         //if (BuildConfig.DEBUG) {
+@@ -56,11 +81,42 @@ public class MainActivity extends AppCompatActivity
+         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+         defaultLanguage = sharedPref.getString("pref_key_default_language", "");
+         defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
++        tabbedMode = sharedPref.getBoolean("pref_key_tabbed_mode", false);
+ 
+-        // load the initial screen
+-        setContentView(R.layout.activity_main);
+-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+-        setSupportActionBar(toolbar);
++        if (tabbedMode) {
++            // load the initial screen in tabbed mode
++            setContentView(R.layout.activity_main_tab);
++            Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
++            setSupportActionBar(toolbar);
++
++            // Create the adapter that will return a fragment for each of the three
++            // primary sections of the activity.
++            mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
++
++            // Set up the ViewPager with the sections adapter.
++            mViewPager = (ViewPager) findViewById(R.id.container);
++            mViewPager.setAdapter(mSectionsPagerAdapter);
++
++            tabLayout = (TabLayout) findViewById(R.id.tabs);
++            tabLayout.setupWithViewPager(mViewPager);
++
++
++        } else {
++            // load the initial screen in drawer mode
++            setContentView(R.layout.activity_main);
++            Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
++            setSupportActionBar(toolbar);
++
++            // initialize the drawer to switch between modules
++            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
++            ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
++                    this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
++            drawer.setDrawerListener(toggle);
++            toggle.syncState();
++            // initialize the navigation menu
++            NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
++            navigationView.setNavigationItemSelectedListener(this);
++        }
+ 
+         // prepare a floating button, but hide it for later purpose
+         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+@@ -73,32 +129,142 @@ public class MainActivity extends AppCompatActivity
+         });
+         fab.setVisibility(View.GONE);
+ 
+-        // initialize the drawer to switch between modules
+-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+-        drawer.setDrawerListener(toggle);
+-        toggle.syncState();
+-        // initialize the navigation menu
+-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+-        navigationView.setNavigationItemSelectedListener(this);
+-
+         // initiate the first menu item as auto-selected depending on settings
+-        if(defaultFragment.equals("Conversation")) {
+-            conversationfragment();
+-        } else if(defaultFragment.equals("Contacts")) {
+-            contactslistfragment();
+-        } else if(defaultFragment.equals("Products")) {
+-            inventoryfragment();
+-        } else if(defaultFragment.equals("Trycorder")) {
+-            trycorderactivity();
++        if(tabbedMode) {
++            if (defaultFragment.equals("Conversation")) {
++                mViewPager.setCurrentItem(2);
++            } else if (defaultFragment.equals("Contacts")) {
++                mViewPager.setCurrentItem(5);
++            } else if (defaultFragment.equals("Products")) {
++                mViewPager.setCurrentItem(7);
++            } else if (defaultFragment.equals("Trycorder")) {
++                trycorderactivity();
++            } else {
++                mViewPager.setCurrentItem(0);
++            }
+         } else {
+-            budgetfragment();
++            if (defaultFragment.equals("Conversation")) {
++                conversationfragment();
++            } else if (defaultFragment.equals("Contacts")) {
++                contactslistfragment();
++            } else if (defaultFragment.equals("Products")) {
++                inventoryfragment();
++            } else if (defaultFragment.equals("Trycorder")) {
++                trycorderactivity();
++            } else {
++                budgetfragment();
++            }
++        }
 +    }
 +
-+    @Override
-     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-         View view = inflater.inflate(R.layout.conversation_fragment, container, false);
- 
-@@ -167,6 +178,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
-         super.onResume();
++    // =====================================================================================
++    // section for tabbed mode
++    // =====================================================================================
++
++    /**
++     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
++     * one of the sections/tabs/pages.
++     */
++    public class SectionsPagerAdapter extends FragmentPagerAdapter {
++
++        public SectionsPagerAdapter(FragmentManager fm) {
++            super(fm);
++        }
++
++        @Override
++        public Fragment getItem(int position) {
++            // getItem is called to instantiate the fragment for the given page.
++            // Return a PlaceholderFragment (defined as a static inner class below).
++            if(position==0) {
++                budgetFragment = new BudgetFragment();
++                return budgetFragment;
++            } else if(position==1) {
++                notesFragment = new NotesFragment();
++                return notesFragment;
++            } else if(position==2) {
++                conversationFragment = new ConversationFragment();
++                return conversationFragment;
++            } else if(position==3) {
++                discussionFragment = new DiscussionFragment();
++                return discussionFragment;
++            } else if(position==4) {
++                perroquetFragment = new PerroquetFragment();
++                return perroquetFragment;
++            } else if(position==5) {
++                contactslistFragment = new ContactsListFragment();
++                return contactslistFragment;
++            } else if(position==6) {
++                contactadminFragment = new ContactAdminFragment();
++                return contactadminFragment;
++            } else if(position==7) {
++                inventoryFragment = new ProductsListFragment();
++                return inventoryFragment;
++            } else if(position==8) {
++                productdetailFragment = new ProductDetailFragment();
++                return productdetailFragment;
++            }
++            budgetFragment = new BudgetFragment();
++            return budgetFragment;
++        }
++
++        @Override
++        public int getCount() {
++            // Show 9 total pages.
++            return 9;
++        }
++
++        @Override
++        public CharSequence getPageTitle(int position) {
++            switch (position) {
++                case 0:
++                    return "Budget";
++                case 1:
++                    return "Notes";
++                case 2:
++                    return "Conversation";
++                case 3:
++                    return "Discussion";
++                case 4:
++                    return "Perroquet";
++                case 5:
++                    return "Contacts";
++                case 6:
++                    return "Client";
++                case 7:
++                    return "Inventaire";
++                case 8:
++                    return "Produit";
++            }
++            return null;
+         }
      }
  
-+    // create the menu option to list the conversation tokens
-+    @Override
-+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-+        super.onCreateOptionsMenu(menu, inflater);
-+        // Inflates the options menu for this fragment
-+        inflater.inflate(R.menu.conversation_list_menu, menu);
-+    }
++    // =====================================================================================
++    // section common for drawer and tabbed modes
++    // =====================================================================================
 +
-+    // open the list of the conversation tokens when selected by menu
-+    @Override
-+    public boolean onOptionsItemSelected(MenuItem item) {
-+        switch (item.getItemId()) {
-+            // When "list" menu option selected
-+            case R.id.menu_list_conversation:
-+                Intent intent = new Intent(getActivity(), ConversationListActivity.class);
-+                startActivity(intent);
-+                return true;
++    // =====================================================================================
++    // fragments holders to keep them in memory
++    private NotesFragment notesFragment = null;
++    private BudgetFragment budgetFragment = null;
++    private PerroquetFragment perroquetFragment = null;
++    private DiscussionFragment discussionFragment = null;
++    private ConversationFragment conversationFragment = null;
++    private ContactsListFragment contactslistFragment = null;
++    private ContactAdminFragment contactadminFragment = null;
++    private ProductsListFragment inventoryFragment = null;
++    private ProductDetailFragment productdetailFragment = null;
++    private int currentfragment = 0;
++    private Uri currentcontacturi = null;
++    private Uri currentproducturi = null;
++
+     @Override
+     public void onBackPressed() {
++        if(tabbedMode) {
++            super.onBackPressed();
++            return;
 +        }
-+        return super.onOptionsItemSelected(item);
-+    }
-+
- 
-     public void speak(String toSpeak) {
-         mSpeechRecognizer.stopListening();
-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
-index e594246..b83b41c 100644
---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
-@@ -1,7 +1,85 @@
- package net.ddns.mlsoftlaberge.budget.speech;
- 
-+import android.content.SharedPreferences;
-+import android.os.Bundle;
-+import android.preference.PreferenceManager;
-+import android.support.v7.app.AppCompatActivity;
-+import android.view.LayoutInflater;
-+import android.view.View;
-+import android.view.ViewGroup;
-+import android.widget.ImageButton;
-+import android.widget.LinearLayout;
-+import android.widget.TextView;
-+import android.widget.Toast;
-+
-+import net.ddns.mlsoftlaberge.budget.R;
-+
- /**
-  * Created by mlsoft on 16/04/16.
-  */
--public class ConversationListActivity {
-+public class ConversationListActivity extends AppCompatActivity {
-+
-+    private String defaultLanguage;
-+    ConversationMatcher cMatcher;
-+    ConversationMatcher.Matcher mMatcher;
-+    int nbmatcher;
-+
-+    LinearLayout mLayout;
-+
-+    @Override
-+    protected void onCreate(Bundle savedInstanceState) {
-+        super.onCreate(savedInstanceState);
-+        // read the needed preferences for this module
-+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-+        defaultLanguage = sharedPref.getString("pref_key_default_language", "");
-+        // load the initial screen
-+        setContentView(R.layout.conversation_list_activity);
-+
-+        // initialize a conversation matcher to load the data
-+        cMatcher = new ConversationMatcher();
-+        nbmatcher=cMatcher.getnbmatcher();
-+
-+        mLayout = (LinearLayout) findViewById(R.id.layout_conversationlist);
-+
-+        fillconversationlist();
-+    }
-+
-+    // fill the transactions layout with the transaction views
-+    private void fillconversationlist() {
-+        // Each LinearLayout has the same LayoutParams so this can
-+        // be created once and used for each cumulative layouts of data
-+        final LinearLayout.LayoutParams tlayoutParams =
-+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-+                        ViewGroup.LayoutParams.WRAP_CONTENT);
-+        // Clears out the details layout first in case the details
-+        // layout has data from a previous data load still
-+        // added as children.
-+        mLayout.removeAllViews();
-+        int i;
-+        for (i = 0; i < nbmatcher; ++i) {
-+            // Builds the transaction layout
-+            // Inflates the transaction layout
-+            LinearLayout tlayout = (LinearLayout) LayoutInflater.from(this).inflate(
-+                    R.layout.conversation_list_item, null, false);
-+
-+            // point to the 4 fields of the layout
-+            TextView question = (TextView) tlayout.findViewById(R.id.question);
-+            TextView answer = (TextView) tlayout.findViewById(R.id.answer);
-+
-+            // get the current transaction
-+            mMatcher = cMatcher.getmatcher(i);
-+
-+            // fill the fields with the table data
-+
-+            question.setText(mMatcher.match1);
-+            answer.setText(mMatcher.response);
-+
-+            // Adds the new note layout to the notes layout
-+            mLayout.addView(tlayout, tlayoutParams);
-+        }
-+    }
-+
-+
-+
-+
- }
-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
-index f2fc5a5..4511323 100644
---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
-@@ -1,7 +1,192 @@
- package net.ddns.mlsoftlaberge.budget.speech;
- 
-+import android.os.Environment;
-+import android.widget.Toast;
-+
-+import java.io.BufferedReader;
-+import java.io.File;
-+import java.io.FileNotFoundException;
-+import java.io.FileReader;
-+import java.io.FileWriter;
-+import java.io.IOException;
-+import java.util.Locale;
-+
- /**
-  * Created by mlsoft on 16/04/16.
-  */
- public class ConversationMatcher {
-+
-+    // =================================================================================
-+    // sentence recognition and appropriate response
-+
-+    public class Matcher {
-+        String lang;
-+        String match1;
-+        String match2;
-+        String match3;
-+        String response;
-+        String tospeak;
-+    }
-+
-+    Matcher mMatcher[];
-+    final int MAXMATCHER = 50;
-+    int nbmatcher = 0;
-+
-+    public Matcher matchmatcher(String voiceorig) {
-+        if (nbmatcher == 0) loadmatcher();
-+        int i;
-+        String voice = voiceorig.toLowerCase();
-+        for (i = 0; i < nbmatcher; ++i) {
-+            if (voice.contains(mMatcher[i].match1)) {
-+                if (voice.contains(mMatcher[i].match2)) {
-+                    if (voice.contains(mMatcher[i].match3)) {
-+                        String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
-+                        mMatcher[i].tospeak = String.format(mMatcher[i].response, monnom);
-+                        return (mMatcher[i]);
-+                    }
-+                }
-+            }
-+        }
-+        return (null);
-+    }
-+
-+    public Matcher getmatcher(int no) {
-+        if (nbmatcher == 0) loadmatcher();
-+        if (no >= nbmatcher) return (null);
-+        return (mMatcher[no]);
-+    }
-+
-+    public int getnbmatcher() {
-+        if (nbmatcher == 0) loadmatcher();
-+        return (nbmatcher);
-+    }
-+
-+    public void loadmatcher() {
-+        mMatcher = new Matcher[MAXMATCHER];
-+        nbmatcher = 0;
-+        if (!isExternalStorageReadable()) return;
-+        loadMatcherFile();
-+    }
-+
-+    public void savematcher() {
-+        // save the table
-+        if (!isExternalStorageWritable()) return;
-+        saveMatcherFile();
-+    }
-+
-+    public void setmatcher(String lan, String mat1, String mat2, String mat3, String res) {
-+        if (nbmatcher >= MAXMATCHER) return;
-+        mMatcher[nbmatcher] = new Matcher();
-+        mMatcher[nbmatcher].lang = new String(lan);
-+        mMatcher[nbmatcher].match1 = new String(mat1);
-+        mMatcher[nbmatcher].match2 = new String(mat2);
-+        mMatcher[nbmatcher].match3 = new String(mat3);
-+        mMatcher[nbmatcher].response = new String(res);
-+        mMatcher[nbmatcher].tospeak = new String("");
-+        nbmatcher++;
-+    }
-+
-+    public void setmatcher(String line) {
-+        if (nbmatcher >= MAXMATCHER) return;
-+        String field = null;
-+        int p = 0;
-+        int q = 0;
-+        mMatcher[nbmatcher] = new Matcher();
-+        q = line.indexOf(':');
-+        field = line.substring(p, q);
-+        mMatcher[nbmatcher].lang = field;
-+        p = q + 1;
-+        q = line.indexOf(':', p);
-+        field = line.substring(p, q);
-+        mMatcher[nbmatcher].match1 = field;
-+        p = q + 1;
-+        q = line.indexOf(':', p);
-+        field = line.substring(p, q);
-+        mMatcher[nbmatcher].match2 = field;
-+        p = q + 1;
-+        q = line.indexOf(':', p);
-+        field = line.substring(p, q);
-+        mMatcher[nbmatcher].match3 = field;
-+        p = q + 1;
-+        q = line.indexOf(':', p);
-+        field = line.substring(p, q);
-+        mMatcher[nbmatcher].response = field;
-+        mMatcher[nbmatcher].tospeak = "";
-+        nbmatcher++;
-+    }
-+
-+    /* Checks if external storage is available to at least read */
-+    public boolean isExternalStorageReadable() {
-+        String state = Environment.getExternalStorageState();
-+        if (Environment.MEDIA_MOUNTED.equals(state) ||
-+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
++        // to do only in drawer mode
+         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+         if (drawer.isDrawerOpen(GravityCompat.START)) {
+             drawer.closeDrawer(GravityCompat.START);
+@@ -131,11 +297,131 @@ public class MainActivity extends AppCompatActivity
+         if (id == R.id.action_settings) {
+             settingsactivity();
+             return true;
++        } else if (id == R.id.action_trycorder) {
++            trycorderactivity();
 +            return true;
-+        }
-+        return false;
-+    }
-+
-+    /* Checks if external storage is available for read and write */
-+    public boolean isExternalStorageWritable() {
-+        String state = Environment.getExternalStorageState();
-+        if (Environment.MEDIA_MOUNTED.equals(state)) {
-+            return true;
-+        }
-+        return false;
-+    }
-+
-+    public File getAlbumStorageDir(String albumName) {
-+        // Get the directory for the user's public pictures directory.
-+        File file = new File(Environment.getExternalStoragePublicDirectory(
-+                Environment.DIRECTORY_DOCUMENTS), albumName);
-+        if (!file.mkdirs()) {
-+            //Toast.makeText(getActivity(), "Directory not Created", Toast.LENGTH_SHORT).show();
-+        }
-+        return file;
-+    }
-+
-+    public void saveMatcherFile() {
-+        File directory = getAlbumStorageDir("Conversation");
-+        try {
-+            FileWriter out = new FileWriter(new File(directory, "conversation.txt"));
-+            for (int i = 0; i < nbmatcher; ++i) {
-+                out.write(mMatcher[i].lang);
-+                out.write(":");
-+                out.write(mMatcher[i].match1);
-+                out.write(":");
-+                out.write(mMatcher[i].match2);
-+                out.write(":");
-+                out.write(mMatcher[i].match3);
-+                out.write(":");
-+                out.write(mMatcher[i].response);
-+                out.write(":");
-+                out.write("\n");
-+            }
-+            out.close();
-+        } catch (IOException e) {
-+            //Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
-+        } finally {
-+            //Toast.makeText(getActivity(), "Save Successful", Toast.LENGTH_SHORT).show();
-+        }
-+    }
-+
-+    public void loadMatcherFile() {
-+        File directory = getAlbumStorageDir("Conversation");
-+        BufferedReader in = null;
-+        String line;
-+        try {
-+            in = new BufferedReader(new FileReader(new File(directory, "conversation.txt")));
-+            nbmatcher = 0;
-+            while ((line = in.readLine()) != null) {
-+                // decode the line
-+                setmatcher(line);
-+            }
-+        } catch (FileNotFoundException e) {
-+            //Toast.makeText(getActivity(), "FileNotFoundException", Toast.LENGTH_SHORT).show();
-+        } catch (IOException e) {
-+            //Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
-+        } finally {
-+            //Toast.makeText(getActivity(), "Load Successful", Toast.LENGTH_SHORT).show();
-+        }
-+    }
-+
- }
-diff --git a/app/src/main/res/layout/conversation_list_activity.xml b/app/src/main/res/layout/conversation_list_activity.xml
-index 3509b84..77ae22d 100644
---- a/app/src/main/res/layout/conversation_list_activity.xml
-+++ b/app/src/main/res/layout/conversation_list_activity.xml
-@@ -3,4 +3,17 @@
-     android:orientation="vertical" android:layout_width="match_parent"
-     android:layout_height="match_parent">
+         }
  
-+    <ScrollView
-+        android:layout_width="match_parent"
-+        android:layout_height="match_parent"
-+        android:id="@+id/scrollView" >
+         return super.onOptionsItemSelected(item);
+     }
+ 
++    // =====================================================================================
++    // callbacks of fragments to handle in the activity
 +
-+        <LinearLayout
-+            android:id="@+id/layout_conversationlist"
-+            android:orientation="vertical"
++    // ================================== NOTES ========================================
++    // redisplay the list if a note has been modified
++    @Override
++    public void onNoteModified(long id) {
++        if (notesFragment != null) notesFragment.displayListView();
++    }
++
++    // do nothing if note selected
++    @Override
++    public void onNoteSelected(long id) {
++        // the edit fragment is called by the notesfragment
++    }
++
++    // ================================== ContactsList ========================================
++    /**
++     * This interface callback lets the main contacts list fragment notify
++     * this activity that a contact has been selected.
++     *
++     * @param contactUri The contact Uri to the selected contact.
++     */
++    @Override
++    public void onContactSelected(Uri contactUri) {
++        currentcontacturi=contactUri;
++        if(tabbedMode) {
++            mViewPager.setCurrentItem(6);
++            if(contactadminFragment!=null) contactadminFragment.setContact(currentcontacturi);
++        } else {
++            contactadminfragment(contactUri);
++        }
++    }
++
++    /**
++     * This interface callback lets the main contacts list fragment notify
++     * this activity that a contact is no longer selected.
++     */
++    @Override
++    public void onSelectionCleared() {
++
++    }
++
++    @Override
++    public boolean onSearchRequested() {
++        // Don't allow another search if this activity instance is already showing
++        // search results. Only used pre-HC.
++        return super.onSearchRequested();
++    }
++
++    // ================================== ProductsList ========================================
++    /**
++     * This interface callback lets the main contacts list fragment notify
++     * this activity that a contact has been selected.
++     *
++     * @param productUri The product Uri to the selected product.
++     */
++    @Override
++    public void onProductSelected(Uri productUri) {
++        currentproducturi=productUri;
++        if(tabbedMode) {
++            mViewPager.setCurrentItem(8);
++            if(productdetailFragment!=null) productdetailFragment.setProduct(currentproducturi);
++        } else {
++            productfragment(productUri);
++        }
++    }
++
++    /**
++     * This interface callback lets the main products list fragment notify
++     * this activity that a product is no longer selected.
++     */
++    @Override
++    public void onNewProductSelected() {
++        currentproducturi = null;
++        if(tabbedMode) {
++            mViewPager.setCurrentItem(8);
++            if(productdetailFragment!=null) productdetailFragment.setProduct(currentproducturi);
++        } else {
++            productfragment(null);
++        }
++    }
++
++    // ================================== ProductsDetail ========================================
++
++    /**
++     * This interface callback lets the main products list fragment notify
++     * this activity that a product is no longer selected.
++     */
++    @Override
++    public void onProductSaved() {
++        if(tabbedMode) {
++            mViewPager.setCurrentItem(7);
++        } else {
++            inventoryfragment();
++        }
++    }
++
++
++    // =====================================================================================
++    // settings activity incorporation in the display
++    public void settingsactivity() {
++        Intent i = new Intent(this, SettingsActivity.class);
++        startActivity(i);
++    }
++
++    // =====================================================================================
++    // trycorder activity incorporation in the display
++    public void trycorderactivity() {
++        Intent i = new Intent(this, TrycorderActivity.class);
++        startActivity(i);
++    }
++
++    // =====================================================================================
++    // section for navigation with a drawer
++    // =====================================================================================
++
+     @SuppressWarnings("StatementWithEmptyBody")
+     @Override
+     public boolean onNavigationItemSelected(MenuItem item) {
+@@ -174,21 +460,6 @@ public class MainActivity extends AppCompatActivity
+     }
+ 
+     // =====================================================================================
+-    // fragments holders to keep them in memory
+-    private NotesFragment notesFragment = null;
+-    private BudgetFragment budgetFragment = null;
+-    private PerroquetFragment perroquetFragment = null;
+-    private DiscussionFragment discussionFragment = null;
+-    private ConversationFragment conversationFragment = null;
+-    private ContactsListFragment contactslistFragment = null;
+-    private ContactAdminFragment contactadminFragment = null;
+-    private ProductsListFragment inventoryFragment = null;
+-    private ProductDetailFragment productdetailFragment = null;
+-    private int currentfragment = 0;
+-    private Uri currentcontacturi = null;
+-    private Uri currentproducturi = null;
+-
+-    // =====================================================================================
+     // first fragment incorporation in the display
+     public void notesfragment() {
+         setTitle("Notes Fragment");
+@@ -207,18 +478,6 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 1;
+     }
+ 
+-        // redisplay the list if a note has been modified
+-    @Override
+-    public void onNoteModified(long id) {
+-        if(notesFragment!=null) notesFragment.displayListView();
+-    }
+-
+-    // do nothing if note selected
+-    @Override
+-    public void onNoteSelected(long id) {
+-        // the edit fragment is called by the notesfragment
+-    }
+-
+     // =====================================================================================
+     // second fragment incorporation in the display
+     public void budgetfragment() {
+@@ -256,33 +515,6 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 3;
+     }
+ 
+-    /**
+-     * This interface callback lets the main contacts list fragment notify
+-     * this activity that a contact has been selected.
+-     *
+-     * @param contactUri The contact Uri to the selected contact.
+-     */
+-    @Override
+-    public void onContactSelected(Uri contactUri) {
+-        contactadminfragment(contactUri);
+-    }
+-
+-    /**
+-     * This interface callback lets the main contacts list fragment notify
+-     * this activity that a contact is no longer selected.
+-     */
+-    @Override
+-    public void onSelectionCleared() {
+-
+-    }
+-
+-    @Override
+-    public boolean onSearchRequested() {
+-        // Don't allow another search if this activity instance is already showing
+-        // search results. Only used pre-HC.
+-        return super.onSearchRequested();
+-    }
+-
+     // =====================================================================================
+ 
+     public void contactadminfragment(Uri contactUri) {
+@@ -318,27 +550,6 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 5;
+     }
+ 
+-    /**
+-     * This interface callback lets the main contacts list fragment notify
+-     * this activity that a contact has been selected.
+-     *
+-     * @param productUri The product Uri to the selected product.
+-     */
+-    @Override
+-    public void onProductSelected(Uri productUri) {
+-        productfragment(productUri);
+-    }
+-
+-    /**
+-     * This interface callback lets the main products list fragment notify
+-     * this activity that a product is no longer selected.
+-     */
+-    @Override
+-    public void onNewProductSelected() {
+-        currentproducturi=null;
+-        productfragment(null);
+-    }
+-
+     // =====================================================================================
+ 
+     public void productfragment(Uri productUri) {
+@@ -361,16 +572,6 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 6;
+     }
+ 
+-    /**
+-     * This interface callback lets the main products list fragment notify
+-     * this activity that a product is no longer selected.
+-     */
+-    @Override
+-    public void onProductSaved() {
+-        inventoryfragment();
+-    }
+-
+-
+     // =====================================================================================
+ 
+     // =====================================================================================
+@@ -431,20 +632,5 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 9;
+     }
+ 
+-    // =====================================================================================
+-    // settings activity incorporation in the display
+-    public void settingsactivity() {
+-        Intent i = new Intent(this, SettingsActivity.class);
+-        startActivity(i);
+-    }
+-
+-    // =====================================================================================
+-    // trycorder activity incorporation in the display
+-    public void trycorderactivity() {
+-        Intent i = new Intent(this, TrycorderActivity.class);
+-        startActivity(i);
+-    }
+-
+-
+ 
+ }
+diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/products/ProductDetailFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/products/ProductDetailFragment.java
+index be3f1aa..798d060 100644
+--- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/products/ProductDetailFragment.java
++++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/products/ProductDetailFragment.java
+@@ -138,6 +138,12 @@ public class ProductDetailFragment extends Fragment {
+         }
+     }
+ 
++	public void setProduct(Uri uri) {
++		if(uri!=null) {
++			fillData(uri);
++		}
++	}
++
+ 	private void fillData(Uri uri) {
+ 		String[] projection = { ProductTable.COLUMN_NAME,ProductTable.COLUMN_UPC,
+ 				ProductTable.COLUMN_DESCRIPTION, ProductTable.COLUMN_CATEGORY };
+diff --git a/app/src/main/res/layout/product_edit.xml b/app/src/main/res/layout/product_edit.xml
+index b6d7264..a83badf 100644
+--- a/app/src/main/res/layout/product_edit.xml
++++ b/app/src/main/res/layout/product_edit.xml
+@@ -36,17 +36,17 @@
+             android:imeOptions="actionNext" >
+         </EditText>
+ 
+-    </LinearLayout>
++        <EditText
++            android:id="@+id/product_edit_description"
 +            android:layout_width="match_parent"
-+            android:layout_height="wrap_content">
-+        </LinearLayout>
-+    </ScrollView>
-+
- </LinearLayout>
-\ No newline at end of file
-diff --git a/app/src/main/res/layout/conversation_list_item.xml b/app/src/main/res/layout/conversation_list_item.xml
-index 3509b84..9fc9b4a 100644
---- a/app/src/main/res/layout/conversation_list_item.xml
-+++ b/app/src/main/res/layout/conversation_list_item.xml
-@@ -1,6 +1,20 @@
- <?xml version="1.0" encoding="utf-8"?>
- <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
--    android:orientation="vertical" android:layout_width="match_parent"
--    android:layout_height="match_parent">
-+    android:layout_width="match_parent"
-+    android:layout_height="match_parent"
-+    android:orientation="vertical">
++            android:layout_height="wrap_content"
++            android:layout_weight="1"
++            android:gravity="top"
++            android:hint="@string/product_edit_description"
++            android:imeOptions="actionNext" >
++        </EditText>
  
--</LinearLayout>
-\ No newline at end of file
-+    <TextView
-+        android:id="@+id/question"
-+        android:layout_width="wrap_content"
-+        android:layout_height="wrap_content"
-+        android:text="Question"
-+        android:textSize="18sp" />
-+
-+    <TextView
-+        android:id="@+id/answer"
-+        android:layout_width="wrap_content"
-+        android:layout_height="wrap_content"
-+        android:text="Answer" />
-+
-+</LinearLayout>
-diff --git a/app/src/main/res/menu/conversation_list_menu.xml b/app/src/main/res/menu/conversation_list_menu.xml
-index fe187c0..57a8f08 100644
---- a/app/src/main/res/menu/conversation_list_menu.xml
-+++ b/app/src/main/res/menu/conversation_list_menu.xml
-@@ -1,4 +1,11 @@
- <?xml version="1.0" encoding="utf-8"?>
- <menu xmlns:android="http://schemas.android.com/apk/res/android">
+-    <EditText
+-        android:id="@+id/product_edit_description"
+-        android:layout_width="fill_parent"
+-        android:layout_height="fill_parent"
+-        android:layout_weight="1"
+-        android:gravity="top"
+-        android:hint="@string/product_edit_description"
+-        android:imeOptions="actionNext" >
+-    </EditText>
++    </LinearLayout>
  
+     <Button
+         android:id="@+id/product_edit_button"
+diff --git a/app/src/main/res/menu/activity_main_menu.xml b/app/src/main/res/menu/activity_main_menu.xml
+index a2411e3..2ef1ff9 100644
+--- a/app/src/main/res/menu/activity_main_menu.xml
++++ b/app/src/main/res/menu/activity_main_menu.xml
+@@ -6,4 +6,9 @@
+         android:orderInCategory="100"
+         android:title="@string/action_settings"
+         app:showAsAction="never" />
 +    <item
-+        android:id="@+id/menu_list_conversation"
-+        android:icon="@drawable/ic_stat_notification"
-+        android:showAsAction="ifRoom"
-+        android:title="Conversation List" />
-+
-+
++        android:id="@+id/action_trycorder"
++        android:orderInCategory="50"
++        android:title="Trycorder"
++        app:showAsAction="never" />
  </menu>
-\ No newline at end of file
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index d01dd11..da58324 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -1,6 +1,8 @@
+ <resources>
+     <string name="app_name">Budget</string>
+ 
++    <string name="section_format">Hello World from section: %1$d</string>
++
+     <string name="navigation_drawer_open">Open navigation drawer</string>
+     <string name="navigation_drawer_close">Close navigation drawer</string>
+ 
+diff --git a/app/src/main/res/xml/preferences.xml b/app/src/main/res/xml/preferences.xml
+index a484a30..f5a3f00 100644
+--- a/app/src/main/res/xml/preferences.xml
++++ b/app/src/main/res/xml/preferences.xml
+@@ -4,6 +4,11 @@
+     <PreferenceCategory
+         android:title="Module Main"
+         android:key="pref_key_main_settings">
++        <CheckBoxPreference
++            android:key="pref_key_tabbed_mode"
++            android:summary="Activates the Tabs mode"
++            android:title="Tabbed Mode"
++            android:defaultValue="false" />
+         <ListPreference
+             android:key="pref_key_default_language"
+             android:entries="@array/listen_array_entries"
 diff --git a/gitdiff.txt b/gitdiff.txt
-index 914b86e..77f690f 100644
+index d22fc25..a68725b 100644
 --- a/gitdiff.txt
 +++ b/gitdiff.txt
-@@ -1,1326 +0,0 @@
+@@ -1,1778 +0,0 @@
 -diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
--index c34ef89..3b9e369 100644
+-index 3b9e369..11ec7ff 100644
 ---- a/app/src/main/AndroidManifest.xml
 -+++ b/app/src/main/AndroidManifest.xml
--@@ -40,7 +40,8 @@
--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
--             -->
---            <meta-data android:name="android.support.PARENT_ACTIVITY"
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
+-@@ -72,6 +72,21 @@
+-                 android:name="android.support.PARENT_ACTIVITY"
 -                 android:value=".MainActivity" />
 -         </activity>
--         <activity
--@@ -53,7 +54,8 @@
--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
--             -->
---            <meta-data android:name="android.support.PARENT_ACTIVITY"
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--                 android:value=".MainActivity" />
--         </activity>
--         <activity
--@@ -66,14 +68,131 @@
--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
--             -->
---            <meta-data android:name="android.support.PARENT_ACTIVITY"
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--                 android:value=".MainActivity" />
--         </activity>
-- 
--         <provider
--             android:name=".products.contentprovider.MyProductContentProvider"
---            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider" >
---        </provider>
--+            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider"></provider>
--+
--+        <activity android:name=".trycorder.TrycorderActivity">
--+            android:label="Trycorder Mode"
+-+        <activity
+-+            android:name=".speech.ConversationListActivity"
+-+            android:label="Conversation List"
 -+            android:parentActivityName=".MainActivity">
+-+            <!-- Define hierarchical parent of this activity, both via the system
+-+                 parentActivityName attribute (added in API Level 16) and via meta-data annotation.
+-+                 This allows use of the support library NavUtils class in a way that works over
+-+                 all Android versions. See the "Tasks and Back Stack" guide for more information:
+-+                 http://developer.android.com/guide/components/tasks-and-back-stack.html
+-+            -->
 -+            <meta-data
 -+                android:name="android.support.PARENT_ACTIVITY"
 -+                android:value=".MainActivity" />
 -+        </activity>
 -+
--+        <activity
--+            android:name=".trycorder.LiveCameraActivity"
--+            android:label="Camera Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.SmallCameraActivity"
--+            android:label="Small Camera"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.GraphicActivity"
--+            android:label="Graphic Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.CanvasActivity"
--+            android:label="Canvas Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.BeepActivity"
--+            android:label="Beep Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.MediaActivity"
--+            android:label="Media Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.SensorsActivity"
--+            android:label="Sensors Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.ViewActivity"
--+            android:label="View Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.MagneticActivity"
--+            android:label="Magnetic Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.IronActivity"
--+            android:label="Iron Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.SpeakActivity"
--+            android:label="Speak Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
--+        <activity
--+            android:name=".trycorder.ListenActivity"
--+            android:label="Listen Mode"
--+            android:parentActivityName=".trycorder.TrycorderActivity">
--+            <meta-data
--+                android:name="android.support.PARENT_ACTIVITY"
--+                android:value=".trycorder.TrycorderActivity" />
--+        </activity>
--+
 - 
--     </application>
+-         <provider
+-             android:name=".products.contentprovider.MyProductContentProvider"
+-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
+-index 60535bc..fde4b1d 100644
+---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
+-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationFragment.java
+-@@ -14,6 +14,9 @@ import android.speech.SpeechRecognizer;
+- import android.speech.tts.TextToSpeech;
+- import android.support.v4.app.Fragment;
+- import android.view.LayoutInflater;
+-+import android.view.Menu;
+-+import android.view.MenuInflater;
+-+import android.view.MenuItem;
+- import android.view.View;
+- import android.view.ViewGroup;
+- import android.widget.Button;
+-@@ -22,6 +25,7 @@ import android.widget.TextView;
+- import android.widget.Toast;
 - 
--diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
--index 16e6719..987fe2c 100644
----- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
--+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
--@@ -23,9 +23,10 @@ import net.ddns.mlsoftlaberge.budget.notes.NotesEditFragment;
-- import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
-- import net.ddns.mlsoftlaberge.budget.products.ProductDetailFragment;
-- import net.ddns.mlsoftlaberge.budget.products.ProductsListFragment;
---import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
---import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
---import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
--+import net.ddns.mlsoftlaberge.budget.speech.ConversationFragment;
--+import net.ddns.mlsoftlaberge.budget.speech.PerroquetFragment;
--+import net.ddns.mlsoftlaberge.budget.speech.DiscussionFragment;
--+import net.ddns.mlsoftlaberge.budget.trycorder.TrycorderActivity;
-- import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
-- import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
+- import net.ddns.mlsoftlaberge.budget.R;
+-+import net.ddns.mlsoftlaberge.budget.contacts.ContactEditMemoActivity;
 - 
--@@ -49,12 +50,14 @@ public class MainActivity extends AppCompatActivity
--         //}
--         super.onCreate(savedInstanceState);
-- 
--+        // initialize defaults preferences once
--         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
---
--+        // read the needed preferences for this module
--         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
--         defaultLanguage = sharedPref.getString("pref_key_default_language", "");
--         defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
-- 
--+        // load the initial screen
--         setContentView(R.layout.activity_main);
--         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
--         setSupportActionBar(toolbar);
--@@ -70,18 +73,28 @@ public class MainActivity extends AppCompatActivity
--         });
--         fab.setVisibility(View.GONE);
-- 
---
--+        // initialize the drawer to switch between modules
--         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
--         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
--                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
--         drawer.setDrawerListener(toggle);
--         toggle.syncState();
---
--+        // initialize the navigation menu
--         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
--         navigationView.setNavigationItemSelectedListener(this);
-- 
---        // initiate the first menu item as auto-selected
---        conversationfragment();
--+        // initiate the first menu item as auto-selected depending on settings
--+        if(defaultFragment.equals("Conversation")) {
--+            conversationfragment();
--+        } else if(defaultFragment.equals("Contacts")) {
--+            contactslistfragment();
--+        } else if(defaultFragment.equals("Products")) {
--+            inventoryfragment();
--+        } else if(defaultFragment.equals("Trycorder")) {
--+            trycorderactivity();
--+        } else {
--+            budgetfragment();
--+        }
+- import java.io.BufferedReader;
+- import java.io.File;
+-@@ -72,6 +76,13 @@ public class ConversationFragment extends Fragment implements RecognitionListene
 -     }
 - 
 -     @Override
--@@ -131,8 +144,10 @@ public class MainActivity extends AppCompatActivity
--         // choose the fragment to instantiate and connect to main content screen
--         if (id == R.id.nav_notes) {
--             notesfragment();
---        } else if (id == R.id.nav_sensor) {
---            sensorfragment();
--+        } else if (id == R.id.nav_perroquet) {
--+            perroquetfragment();
--+        } else if (id == R.id.nav_trycorder) {
--+            trycorderactivity();
--         } else if (id == R.id.nav_discussion) {
--             discussionfragment();
--         } else if (id == R.id.nav_conversation) {
--@@ -162,7 +177,7 @@ public class MainActivity extends AppCompatActivity
--     // fragments holders to keep them in memory
--     private NotesFragment notesFragment = null;
--     private BudgetFragment budgetFragment = null;
---    private SensorFragment sensorFragment = null;
--+    private PerroquetFragment perroquetFragment = null;
--     private DiscussionFragment discussionFragment = null;
--     private ConversationFragment conversationFragment = null;
--     private ContactsListFragment contactslistFragment = null;
--@@ -359,27 +374,27 @@ public class MainActivity extends AppCompatActivity
--     // =====================================================================================
+-+    public void onCreate(Bundle savedInstanceState) {
+-+        super.onCreate(savedInstanceState);
+-+        // Let this fragment contribute menu items
+-+        setHasOptionsMenu(true);
+-+    }
+-+
+-+    @Override
+-     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+-         View view = inflater.inflate(R.layout.conversation_fragment, container, false);
 - 
--     // =====================================================================================
---    // sensor fragment incorporation in the display
---    public void sensorfragment() {
---        setTitle("Sensor Fragment");
--+    // perroquet fragment incorporation in the display
--+    public void perroquetfragment() {
--+        setTitle("Perroquet Fragment");
-- 
---        if (sensorFragment == null) {
--+        if (perroquetFragment == null) {
--             // Create a new Fragment to be placed in the activity layout
---            sensorFragment = new SensorFragment();
--+            perroquetFragment = new PerroquetFragment();
--             // In case this activity was started with special instructions from an
--             // Intent, pass the Intent's extras to the fragment as arguments
---            sensorFragment.setArguments(getIntent().getExtras());
--+            perroquetFragment.setArguments(getIntent().getExtras());
--         }
-- 
--         // Add the fragment to the 'fragment_container' FrameLayout
--         getSupportFragmentManager().beginTransaction()
---                .replace(R.id.main_content, sensorFragment).commit();
--+                .replace(R.id.main_content, perroquetFragment).commit();
--         currentfragment = 7;
+-@@ -167,6 +178,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+-         super.onResume();
 -     }
 - 
-- 
--     // =====================================================================================
---    // sensor fragment incorporation in the display
--+    // discussion fragment incorporation in the display
--     public void discussionfragment() {
--         setTitle("Discussion Fragment");
-- 
--@@ -398,7 +413,7 @@ public class MainActivity extends AppCompatActivity
--     }
-- 
--     // =====================================================================================
---    // sensor fragment incorporation in the display
--+    // conversation fragment incorporation in the display
--     public void conversationfragment() {
--         setTitle("Conversation Fragment");
-- 
--@@ -423,6 +438,13 @@ public class MainActivity extends AppCompatActivity
--         startActivity(i);
--     }
-- 
--+    // =====================================================================================
--+    // trycorder activity incorporation in the display
--+    public void trycorderactivity() {
--+        Intent i = new Intent(this, TrycorderActivity.class);
--+        startActivity(i);
+-+    // create the menu option to list the conversation tokens
+-+    @Override
+-+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+-+        super.onCreateOptionsMenu(menu, inflater);
+-+        // Inflates the options menu for this fragment
+-+        inflater.inflate(R.menu.conversation_list_menu, menu);
+-+    }
+-+
+-+    // open the list of the conversation tokens when selected by menu
+-+    @Override
+-+    public boolean onOptionsItemSelected(MenuItem item) {
+-+        switch (item.getItemId()) {
+-+            // When "list" menu option selected
+-+            case R.id.menu_list_conversation:
+-+                Intent intent = new Intent(getActivity(), ConversationListActivity.class);
+-+                startActivity(intent);
+-+                return true;
+-+        }
+-+        return super.onOptionsItemSelected(item);
 -+    }
 -+
 - 
+-     public void speak(String toSpeak) {
+-         mSpeechRecognizer.stopListening();
+-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
+-index e594246..b83b41c 100644
+---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
+-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationListActivity.java
+-@@ -1,7 +1,85 @@
+- package net.ddns.mlsoftlaberge.budget.speech;
 - 
+-+import android.content.SharedPreferences;
+-+import android.os.Bundle;
+-+import android.preference.PreferenceManager;
+-+import android.support.v7.app.AppCompatActivity;
+-+import android.view.LayoutInflater;
+-+import android.view.View;
+-+import android.view.ViewGroup;
+-+import android.widget.ImageButton;
+-+import android.widget.LinearLayout;
+-+import android.widget.TextView;
+-+import android.widget.Toast;
+-+
+-+import net.ddns.mlsoftlaberge.budget.R;
+-+
+- /**
+-  * Created by mlsoft on 16/04/16.
+-  */
+--public class ConversationListActivity {
+-+public class ConversationListActivity extends AppCompatActivity {
+-+
+-+    private String defaultLanguage;
+-+    ConversationMatcher cMatcher;
+-+    ConversationMatcher.Matcher mMatcher;
+-+    int nbmatcher;
+-+
+-+    LinearLayout mLayout;
+-+
+-+    @Override
+-+    protected void onCreate(Bundle savedInstanceState) {
+-+        super.onCreate(savedInstanceState);
+-+        // read the needed preferences for this module
+-+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+-+        defaultLanguage = sharedPref.getString("pref_key_default_language", "");
+-+        // load the initial screen
+-+        setContentView(R.layout.conversation_list_activity);
+-+
+-+        // initialize a conversation matcher to load the data
+-+        cMatcher = new ConversationMatcher();
+-+        nbmatcher=cMatcher.getnbmatcher();
+-+
+-+        mLayout = (LinearLayout) findViewById(R.id.layout_conversationlist);
+-+
+-+        fillconversationlist();
+-+    }
+-+
+-+    // fill the transactions layout with the transaction views
+-+    private void fillconversationlist() {
+-+        // Each LinearLayout has the same LayoutParams so this can
+-+        // be created once and used for each cumulative layouts of data
+-+        final LinearLayout.LayoutParams tlayoutParams =
+-+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+-+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+-+        // Clears out the details layout first in case the details
+-+        // layout has data from a previous data load still
+-+        // added as children.
+-+        mLayout.removeAllViews();
+-+        int i;
+-+        for (i = 0; i < nbmatcher; ++i) {
+-+            // Builds the transaction layout
+-+            // Inflates the transaction layout
+-+            LinearLayout tlayout = (LinearLayout) LayoutInflater.from(this).inflate(
+-+                    R.layout.conversation_list_item, null, false);
+-+
+-+            // point to the 4 fields of the layout
+-+            TextView question = (TextView) tlayout.findViewById(R.id.question);
+-+            TextView answer = (TextView) tlayout.findViewById(R.id.answer);
+-+
+-+            // get the current transaction
+-+            mMatcher = cMatcher.getmatcher(i);
+-+
+-+            // fill the fields with the table data
+-+
+-+            question.setText(mMatcher.match1);
+-+            answer.setText(mMatcher.response);
+-+
+-+            // Adds the new note layout to the notes layout
+-+            mLayout.addView(tlayout, tlayoutParams);
+-+        }
+-+    }
+-+
+-+
+-+
+-+
 - }
--diff --git a/app/src/main/res/menu/activity_main_drawer.xml b/app/src/main/res/menu/activity_main_drawer.xml
--index 7d4cad1..78df891 100644
----- a/app/src/main/res/menu/activity_main_drawer.xml
--+++ b/app/src/main/res/menu/activity_main_drawer.xml
--@@ -11,9 +11,13 @@
--             android:icon="@drawable/ic_menu_camera"
--             android:title="Discussion" />
--         <item
---            android:id="@+id/nav_sensor"
--+            android:id="@+id/nav_perroquet"
--             android:icon="@drawable/ic_menu_camera"
---            android:title="Sensor" />
--+            android:title="Perroquet" />
--+        <item
--+            android:id="@+id/nav_trycorder"
--+            android:icon="@drawable/ic_menu_camera"
--+            android:title="Trycorder" />
--         <item
--             android:id="@+id/nav_notes"
--             android:icon="@drawable/ic_action_edit"
--diff --git a/app/src/main/res/values/arrays.xml b/app/src/main/res/values/arrays.xml
--index 68f5f5d..71b3b78 100644
----- a/app/src/main/res/values/arrays.xml
--+++ b/app/src/main/res/values/arrays.xml
--@@ -4,12 +4,16 @@
--     <string-array name="fragment_array_entries">
--         <item>Conversation</item>
--         <item>Contacts</item>
--+        <item>Products</item>
--+        <item>Trycorder</item>
--         <item>None</item>
--     </string-array>
+-diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
+-index f2fc5a5..4511323 100644
+---- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
+-+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/speech/ConversationMatcher.java
+-@@ -1,7 +1,192 @@
+- package net.ddns.mlsoftlaberge.budget.speech;
 - 
--     <string-array name="fragment_array_entryvalues">
--         <item>Conversation</item>
--         <item>Contacts</item>
--+        <item>Products</item>
--+        <item>Trycorder</item>
--         <item>None</item>
--     </string-array>
+-+import android.os.Environment;
+-+import android.widget.Toast;
+-+
+-+import java.io.BufferedReader;
+-+import java.io.File;
+-+import java.io.FileNotFoundException;
+-+import java.io.FileReader;
+-+import java.io.FileWriter;
+-+import java.io.IOException;
+-+import java.util.Locale;
+-+
+- /**
+-  * Created by mlsoft on 16/04/16.
+-  */
+- public class ConversationMatcher {
+-+
+-+    // =================================================================================
+-+    // sentence recognition and appropriate response
+-+
+-+    public class Matcher {
+-+        String lang;
+-+        String match1;
+-+        String match2;
+-+        String match3;
+-+        String response;
+-+        String tospeak;
+-+    }
+-+
+-+    Matcher mMatcher[];
+-+    final int MAXMATCHER = 50;
+-+    int nbmatcher = 0;
+-+
+-+    public Matcher matchmatcher(String voiceorig) {
+-+        if (nbmatcher == 0) loadmatcher();
+-+        int i;
+-+        String voice = voiceorig.toLowerCase();
+-+        for (i = 0; i < nbmatcher; ++i) {
+-+            if (voice.contains(mMatcher[i].match1)) {
+-+                if (voice.contains(mMatcher[i].match2)) {
+-+                    if (voice.contains(mMatcher[i].match3)) {
+-+                        String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
+-+                        mMatcher[i].tospeak = String.format(mMatcher[i].response, monnom);
+-+                        return (mMatcher[i]);
+-+                    }
+-+                }
+-+            }
+-+        }
+-+        return (null);
+-+    }
+-+
+-+    public Matcher getmatcher(int no) {
+-+        if (nbmatcher == 0) loadmatcher();
+-+        if (no >= nbmatcher) return (null);
+-+        return (mMatcher[no]);
+-+    }
+-+
+-+    public int getnbmatcher() {
+-+        if (nbmatcher == 0) loadmatcher();
+-+        return (nbmatcher);
+-+    }
+-+
+-+    public void loadmatcher() {
+-+        mMatcher = new Matcher[MAXMATCHER];
+-+        nbmatcher = 0;
+-+        if (!isExternalStorageReadable()) return;
+-+        loadMatcherFile();
+-+    }
+-+
+-+    public void savematcher() {
+-+        // save the table
+-+        if (!isExternalStorageWritable()) return;
+-+        saveMatcherFile();
+-+    }
+-+
+-+    public void setmatcher(String lan, String mat1, String mat2, String mat3, String res) {
+-+        if (nbmatcher >= MAXMATCHER) return;
+-+        mMatcher[nbmatcher] = new Matcher();
+-+        mMatcher[nbmatcher].lang = new String(lan);
+-+        mMatcher[nbmatcher].match1 = new String(mat1);
+-+        mMatcher[nbmatcher].match2 = new String(mat2);
+-+        mMatcher[nbmatcher].match3 = new String(mat3);
+-+        mMatcher[nbmatcher].response = new String(res);
+-+        mMatcher[nbmatcher].tospeak = new String("");
+-+        nbmatcher++;
+-+    }
+-+
+-+    public void setmatcher(String line) {
+-+        if (nbmatcher >= MAXMATCHER) return;
+-+        String field = null;
+-+        int p = 0;
+-+        int q = 0;
+-+        mMatcher[nbmatcher] = new Matcher();
+-+        q = line.indexOf(':');
+-+        field = line.substring(p, q);
+-+        mMatcher[nbmatcher].lang = field;
+-+        p = q + 1;
+-+        q = line.indexOf(':', p);
+-+        field = line.substring(p, q);
+-+        mMatcher[nbmatcher].match1 = field;
+-+        p = q + 1;
+-+        q = line.indexOf(':', p);
+-+        field = line.substring(p, q);
+-+        mMatcher[nbmatcher].match2 = field;
+-+        p = q + 1;
+-+        q = line.indexOf(':', p);
+-+        field = line.substring(p, q);
+-+        mMatcher[nbmatcher].match3 = field;
+-+        p = q + 1;
+-+        q = line.indexOf(':', p);
+-+        field = line.substring(p, q);
+-+        mMatcher[nbmatcher].response = field;
+-+        mMatcher[nbmatcher].tospeak = "";
+-+        nbmatcher++;
+-+    }
+-+
+-+    /* Checks if external storage is available to at least read */
+-+    public boolean isExternalStorageReadable() {
+-+        String state = Environment.getExternalStorageState();
+-+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+-+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+-+            return true;
+-+        }
+-+        return false;
+-+    }
+-+
+-+    /* Checks if external storage is available for read and write */
+-+    public boolean isExternalStorageWritable() {
+-+        String state = Environment.getExternalStorageState();
+-+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+-+            return true;
+-+        }
+-+        return false;
+-+    }
+-+
+-+    public File getAlbumStorageDir(String albumName) {
+-+        // Get the directory for the user's public pictures directory.
+-+        File file = new File(Environment.getExternalStoragePublicDirectory(
+-+                Environment.DIRECTORY_DOCUMENTS), albumName);
+-+        if (!file.mkdirs()) {
+-+            //Toast.makeText(getActivity(), "Directory not Created", Toast.LENGTH_SHORT).show();
+-+        }
+-+        return file;
+-+    }
+-+
+-+    public void saveMatcherFile() {
+-+        File directory = getAlbumStorageDir("Conversation");
+-+        try {
+-+            FileWriter out = new FileWriter(new File(directory, "conversation.txt"));
+-+            for (int i = 0; i < nbmatcher; ++i) {
+-+                out.write(mMatcher[i].lang);
+-+                out.write(":");
+-+                out.write(mMatcher[i].match1);
+-+                out.write(":");
+-+                out.write(mMatcher[i].match2);
+-+                out.write(":");
+-+                out.write(mMatcher[i].match3);
+-+                out.write(":");
+-+                out.write(mMatcher[i].response);
+-+                out.write(":");
+-+                out.write("\n");
+-+            }
+-+            out.close();
+-+        } catch (IOException e) {
+-+            //Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
+-+        } finally {
+-+            //Toast.makeText(getActivity(), "Save Successful", Toast.LENGTH_SHORT).show();
+-+        }
+-+    }
+-+
+-+    public void loadMatcherFile() {
+-+        File directory = getAlbumStorageDir("Conversation");
+-+        BufferedReader in = null;
+-+        String line;
+-+        try {
+-+            in = new BufferedReader(new FileReader(new File(directory, "conversation.txt")));
+-+            nbmatcher = 0;
+-+            while ((line = in.readLine()) != null) {
+-+                // decode the line
+-+                setmatcher(line);
+-+            }
+-+        } catch (FileNotFoundException e) {
+-+            //Toast.makeText(getActivity(), "FileNotFoundException", Toast.LENGTH_SHORT).show();
+-+        } catch (IOException e) {
+-+            //Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
+-+        } finally {
+-+            //Toast.makeText(getActivity(), "Load Successful", Toast.LENGTH_SHORT).show();
+-+        }
+-+    }
+-+
+- }
+-diff --git a/app/src/main/res/layout/conversation_list_activity.xml b/app/src/main/res/layout/conversation_list_activity.xml
+-index 3509b84..77ae22d 100644
+---- a/app/src/main/res/layout/conversation_list_activity.xml
+-+++ b/app/src/main/res/layout/conversation_list_activity.xml
+-@@ -3,4 +3,17 @@
+-     android:orientation="vertical" android:layout_width="match_parent"
+-     android:layout_height="match_parent">
 - 
+-+    <ScrollView
+-+        android:layout_width="match_parent"
+-+        android:layout_height="match_parent"
+-+        android:id="@+id/scrollView" >
+-+
+-+        <LinearLayout
+-+            android:id="@+id/layout_conversationlist"
+-+            android:orientation="vertical"
+-+            android:layout_width="match_parent"
+-+            android:layout_height="wrap_content">
+-+        </LinearLayout>
+-+    </ScrollView>
+-+
+- </LinearLayout>
+-\ No newline at end of file
+-diff --git a/app/src/main/res/layout/conversation_list_item.xml b/app/src/main/res/layout/conversation_list_item.xml
+-index 3509b84..9fc9b4a 100644
+---- a/app/src/main/res/layout/conversation_list_item.xml
+-+++ b/app/src/main/res/layout/conversation_list_item.xml
+-@@ -1,6 +1,20 @@
+- <?xml version="1.0" encoding="utf-8"?>
+- <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+--    android:orientation="vertical" android:layout_width="match_parent"
+--    android:layout_height="match_parent">
+-+    android:layout_width="match_parent"
+-+    android:layout_height="match_parent"
+-+    android:orientation="vertical">
+- 
+--</LinearLayout>
+-\ No newline at end of file
+-+    <TextView
+-+        android:id="@+id/question"
+-+        android:layout_width="wrap_content"
+-+        android:layout_height="wrap_content"
+-+        android:text="Question"
+-+        android:textSize="18sp" />
+-+
+-+    <TextView
+-+        android:id="@+id/answer"
+-+        android:layout_width="wrap_content"
+-+        android:layout_height="wrap_content"
+-+        android:text="Answer" />
+-+
+-+</LinearLayout>
+-diff --git a/app/src/main/res/menu/conversation_list_menu.xml b/app/src/main/res/menu/conversation_list_menu.xml
+-index fe187c0..57a8f08 100644
+---- a/app/src/main/res/menu/conversation_list_menu.xml
+-+++ b/app/src/main/res/menu/conversation_list_menu.xml
+-@@ -1,4 +1,11 @@
+- <?xml version="1.0" encoding="utf-8"?>
+- <menu xmlns:android="http://schemas.android.com/apk/res/android">
+- 
+-+    <item
+-+        android:id="@+id/menu_list_conversation"
+-+        android:icon="@drawable/ic_stat_notification"
+-+        android:showAsAction="ifRoom"
+-+        android:title="Conversation List" />
+-+
+-+
+- </menu>
+-\ No newline at end of file
 -diff --git a/gitdiff.txt b/gitdiff.txt
--index f02c71b..d957dcd 100644
+-index 914b86e..77f690f 100644
 ---- a/gitdiff.txt
 -+++ b/gitdiff.txt
--@@ -1,973 +0,0 @@
+-@@ -1,1326 +0,0 @@
 --diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
---index b1f1f95..c34ef89 100644
+--index c34ef89..3b9e369 100644
 ----- a/app/src/main/AndroidManifest.xml
 --+++ b/app/src/main/AndroidManifest.xml
---@@ -56,6 +56,19 @@
---             <meta-data android:name="android.support.PARENT_ACTIVITY"
+--@@ -40,7 +40,8 @@
+--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
+--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
+--             -->
+---            <meta-data android:name="android.support.PARENT_ACTIVITY"
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
 --                 android:value=".MainActivity" />
 --         </activity>
---+        <activity
---+            android:name=".utils.SettingsActivity"
---+            android:label="@string/activity_settings"
---+            android:parentActivityName=".MainActivity">
---+            <!-- Define hierarchical parent of this activity, both via the system
---+                 parentActivityName attribute (added in API Level 16) and via meta-data annotation.
---+                 This allows use of the support library NavUtils class in a way that works over
---+                 all Android versions. See the "Tasks and Back Stack" guide for more information:
---+                 http://developer.android.com/guide/components/tasks-and-back-stack.html
---+            -->
---+            <meta-data android:name="android.support.PARENT_ACTIVITY"
---+                android:value=".MainActivity" />
---+        </activity>
+--         <activity
+--@@ -53,7 +54,8 @@
+--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
+--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
+--             -->
+---            <meta-data android:name="android.support.PARENT_ACTIVITY"
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--                 android:value=".MainActivity" />
+--         </activity>
+--         <activity
+--@@ -66,14 +68,131 @@
+--                  all Android versions. See the "Tasks and Back Stack" guide for more information:
+--                  http://developer.android.com/guide/components/tasks-and-back-stack.html
+--             -->
+---            <meta-data android:name="android.support.PARENT_ACTIVITY"
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--                 android:value=".MainActivity" />
+--         </activity>
 -- 
 --         <provider
 --             android:name=".products.contentprovider.MyProductContentProvider"
+---            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider" >
+---        </provider>
+--+            android:authorities="net.ddns.mlsoftlaberge.budget.products.contentprovider"></provider>
+--+
+--+        <activity android:name=".trycorder.TrycorderActivity">
+--+            android:label="Trycorder Mode"
+--+            android:parentActivityName=".MainActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".MainActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.LiveCameraActivity"
+--+            android:label="Camera Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.SmallCameraActivity"
+--+            android:label="Small Camera"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.GraphicActivity"
+--+            android:label="Graphic Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.CanvasActivity"
+--+            android:label="Canvas Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.BeepActivity"
+--+            android:label="Beep Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.MediaActivity"
+--+            android:label="Media Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.SensorsActivity"
+--+            android:label="Sensors Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.ViewActivity"
+--+            android:label="View Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.MagneticActivity"
+--+            android:label="Magnetic Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.IronActivity"
+--+            android:label="Iron Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.SpeakActivity"
+--+            android:label="Speak Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+--+        <activity
+--+            android:name=".trycorder.ListenActivity"
+--+            android:label="Listen Mode"
+--+            android:parentActivityName=".trycorder.TrycorderActivity">
+--+            <meta-data
+--+                android:name="android.support.PARENT_ACTIVITY"
+--+                android:value=".trycorder.TrycorderActivity" />
+--+        </activity>
+--+
+-- 
+--     </application>
+-- 
 --diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
---index 1c9e74f..16e6719 100644
+--index 16e6719..987fe2c 100644
 ----- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
 --+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
---@@ -1,7 +1,10 @@
--- package net.ddns.mlsoftlaberge.budget;
--- 
---+import android.content.Intent;
---+import android.content.SharedPreferences;
--- import android.net.Uri;
--- import android.os.Bundle;
---+import android.preference.PreferenceManager;
--- import android.support.design.widget.FloatingActionButton;
--- import android.support.design.widget.Snackbar;
--- import android.view.View;
---@@ -24,6 +27,7 @@ import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
--- import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
--- import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
+--@@ -23,9 +23,10 @@ import net.ddns.mlsoftlaberge.budget.notes.NotesEditFragment;
+-- import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
+-- import net.ddns.mlsoftlaberge.budget.products.ProductDetailFragment;
+-- import net.ddns.mlsoftlaberge.budget.products.ProductsListFragment;
+---import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
+---import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
+---import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
+--+import net.ddns.mlsoftlaberge.budget.speech.ConversationFragment;
+--+import net.ddns.mlsoftlaberge.budget.speech.PerroquetFragment;
+--+import net.ddns.mlsoftlaberge.budget.speech.DiscussionFragment;
+--+import net.ddns.mlsoftlaberge.budget.trycorder.TrycorderActivity;
 -- import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
---+import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
+-- import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
 -- 
--- public class MainActivity extends AppCompatActivity
---         implements ContactsListFragment.OnContactsInteractionListener,
---@@ -35,6 +39,8 @@ public class MainActivity extends AppCompatActivity
--- 
---     private static final String TAG = "MainActivity";
--- 
---+    private String defaultLanguage;
---+    private String defaultFragment;
--- 
---     @Override
---     protected void onCreate(Bundle savedInstanceState) {
---@@ -42,6 +48,13 @@ public class MainActivity extends AppCompatActivity
---         //    Utils.enableStrictMode();
+--@@ -49,12 +50,14 @@ public class MainActivity extends AppCompatActivity
 --         //}
 --         super.onCreate(savedInstanceState);
---+
---+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
---+
---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
---+        defaultLanguage = sharedPref.getString("pref_key_default_language", "");
---+        defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
---+
+-- 
+--+        // initialize defaults preferences once
+--         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+---
+--+        // read the needed preferences for this module
+--         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+--         defaultLanguage = sharedPref.getString("pref_key_default_language", "");
+--         defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
+-- 
+--+        // load the initial screen
 --         setContentView(R.layout.activity_main);
 --         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 --         setSupportActionBar(toolbar);
---@@ -103,6 +116,7 @@ public class MainActivity extends AppCompatActivity
+--@@ -70,18 +73,28 @@ public class MainActivity extends AppCompatActivity
+--         });
+--         fab.setVisibility(View.GONE);
 -- 
---         //noinspection SimplifiableIfStatement
---         if (id == R.id.action_settings) {
---+            settingsactivity();
---             return true;
+---
+--+        // initialize the drawer to switch between modules
+--         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+--         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+--                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+--         drawer.setDrawerListener(toggle);
+--         toggle.syncState();
+---
+--+        // initialize the navigation menu
+--         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+--         navigationView.setNavigationItemSelectedListener(this);
+-- 
+---        // initiate the first menu item as auto-selected
+---        conversationfragment();
+--+        // initiate the first menu item as auto-selected depending on settings
+--+        if(defaultFragment.equals("Conversation")) {
+--+            conversationfragment();
+--+        } else if(defaultFragment.equals("Contacts")) {
+--+            contactslistfragment();
+--+        } else if(defaultFragment.equals("Products")) {
+--+            inventoryfragment();
+--+        } else if(defaultFragment.equals("Trycorder")) {
+--+            trycorderactivity();
+--+        } else {
+--+            budgetfragment();
+--+        }
+--     }
+-- 
+--     @Override
+--@@ -131,8 +144,10 @@ public class MainActivity extends AppCompatActivity
+--         // choose the fragment to instantiate and connect to main content screen
+--         if (id == R.id.nav_notes) {
+--             notesfragment();
+---        } else if (id == R.id.nav_sensor) {
+---            sensorfragment();
+--+        } else if (id == R.id.nav_perroquet) {
+--+            perroquetfragment();
+--+        } else if (id == R.id.nav_trycorder) {
+--+            trycorderactivity();
+--         } else if (id == R.id.nav_discussion) {
+--             discussionfragment();
+--         } else if (id == R.id.nav_conversation) {
+--@@ -162,7 +177,7 @@ public class MainActivity extends AppCompatActivity
+--     // fragments holders to keep them in memory
+--     private NotesFragment notesFragment = null;
+--     private BudgetFragment budgetFragment = null;
+---    private SensorFragment sensorFragment = null;
+--+    private PerroquetFragment perroquetFragment = null;
+--     private DiscussionFragment discussionFragment = null;
+--     private ConversationFragment conversationFragment = null;
+--     private ContactsListFragment contactslistFragment = null;
+--@@ -359,27 +374,27 @@ public class MainActivity extends AppCompatActivity
+--     // =====================================================================================
+-- 
+--     // =====================================================================================
+---    // sensor fragment incorporation in the display
+---    public void sensorfragment() {
+---        setTitle("Sensor Fragment");
+--+    // perroquet fragment incorporation in the display
+--+    public void perroquetfragment() {
+--+        setTitle("Perroquet Fragment");
+-- 
+---        if (sensorFragment == null) {
+--+        if (perroquetFragment == null) {
+--             // Create a new Fragment to be placed in the activity layout
+---            sensorFragment = new SensorFragment();
+--+            perroquetFragment = new PerroquetFragment();
+--             // In case this activity was started with special instructions from an
+--             // Intent, pass the Intent's extras to the fragment as arguments
+---            sensorFragment.setArguments(getIntent().getExtras());
+--+            perroquetFragment.setArguments(getIntent().getExtras());
 --         }
 -- 
---@@ -402,6 +416,13 @@ public class MainActivity extends AppCompatActivity
---         currentfragment = 9;
+--         // Add the fragment to the 'fragment_container' FrameLayout
+--         getSupportFragmentManager().beginTransaction()
+---                .replace(R.id.main_content, sensorFragment).commit();
+--+                .replace(R.id.main_content, perroquetFragment).commit();
+--         currentfragment = 7;
+--     }
+-- 
+-- 
+--     // =====================================================================================
+---    // sensor fragment incorporation in the display
+--+    // discussion fragment incorporation in the display
+--     public void discussionfragment() {
+--         setTitle("Discussion Fragment");
+-- 
+--@@ -398,7 +413,7 @@ public class MainActivity extends AppCompatActivity
+--     }
+-- 
+--     // =====================================================================================
+---    // sensor fragment incorporation in the display
+--+    // conversation fragment incorporation in the display
+--     public void conversationfragment() {
+--         setTitle("Conversation Fragment");
+-- 
+--@@ -423,6 +438,13 @@ public class MainActivity extends AppCompatActivity
+--         startActivity(i);
 --     }
 -- 
 --+    // =====================================================================================
---+    // settings activity incorporation in the display
---+    public void settingsactivity() {
---+        Intent i = new Intent(this, SettingsActivity.class);
+--+    // trycorder activity incorporation in the display
+--+    public void trycorderactivity() {
+--+        Intent i = new Intent(this, TrycorderActivity.class);
 --+        startActivity(i);
 --+    }
 --+
 -- 
 -- 
 -- }
---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
---index 335057c..b8e7e11 100644
------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
---@@ -22,12 +22,14 @@ import android.app.Activity;
--- import android.app.SearchManager;
--- import android.content.Context;
--- import android.content.Intent;
---+import android.content.SharedPreferences;
--- import android.content.res.AssetFileDescriptor;
--- import android.database.Cursor;
--- import android.graphics.Bitmap;
--- import android.net.Uri;
--- import android.os.Build;
--- import android.os.Bundle;
---+import android.preference.PreferenceManager;
--- import android.provider.ContactsContract.Contacts;
--- import android.provider.ContactsContract.Contacts.Photo;
--- import android.support.v4.app.Fragment;
---@@ -116,6 +118,7 @@ public class ContactsListFragment extends ListFragment implements
--- 
---     // keep the flag if we want starred filter or not
---     private int starredfind=1;
---+    private boolean starred=true;
--- 
---     /**
---      * Fragments require an empty constructor.
---@@ -186,6 +189,12 @@ public class ContactsListFragment extends ListFragment implements
--- 
---         // Add a cache to the image loader
---         mImageLoader.addImageCache(getActivity().getSupportFragmentManager(), 0.1f);
---+
---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
---+        starred = sharedPref.getBoolean("pref_key_starred",true);
---+        if(starred) starredfind=1;
---+        else starredfind=0;
---+
---     }
--- 
---     @Override
---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
---index 2de4a07..5a7a312 100644
------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
---@@ -1,49 +1,52 @@
--- package net.ddns.mlsoftlaberge.budget.sensors;
--- 
----import android.app.Dialog;
--- import android.content.Context;
--- import android.content.Intent;
---+import android.content.SharedPreferences;
--- import android.media.AudioManager;
----import android.net.ConnectivityManager;
----import android.net.NetworkInfo;
----import android.os.Build;
--- import android.os.Bundle;
---+import android.os.Environment;
--- import android.os.SystemClock;
---+import android.preference.PreferenceManager;
--- import android.speech.RecognitionListener;
--- import android.speech.RecognizerIntent;
----import android.speech.RecognizerResultsIntent;
--- import android.speech.SpeechRecognizer;
--- import android.speech.tts.TextToSpeech;
--- import android.support.v4.app.Fragment;
----import android.util.Log;
--- import android.view.LayoutInflater;
--- import android.view.View;
--- import android.view.ViewGroup;
--- import android.widget.Button;
----import android.widget.ListView;
---+import android.widget.EditText;
--- import android.widget.TextView;
--- import android.widget.Toast;
--- 
--- import net.ddns.mlsoftlaberge.budget.R;
----
---+import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
---+
---+import java.io.BufferedReader;
---+import java.io.File;
---+import java.io.FileNotFoundException;
---+import java.io.FileReader;
---+import java.io.FileWriter;
---+import java.io.IOException;
--- import java.util.ArrayList;
--- import java.util.Locale;
--- import java.util.Timer;
----import java.util.TimerTask;
--- 
--- /**
---  * Created by mlsoft on 05/04/16.
---  */
--- public class ConversationFragment extends Fragment implements RecognitionListener {
--- 
---+    private static final String TAG="ConversationFragment";
---+
---     private static final int REQUEST_CODE = 1234;
---     Button Start;
----    TextView Speech;
----    TextView Discussion;
---+    TextView Error;
---     TextView Status;
----    ArrayList<String> matches_text;
---+
---     TextToSpeech t1;
----    StringBuffer discuss;
--- 
---     AudioManager mAudioManager;
---     SpeechRecognizer mSpeechRecognizer;
---@@ -52,6 +55,19 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---     Timer mTimer;
---     boolean islistening;
--- 
---+    EditText Speech;
---+    TextView Speak;
---+
---+    Button Setquestion;
---+    TextView Lastquestion;
---+    Button Setanswer;
---+    TextView Lastanswer;
---+    Button Savetable;
---+    TextView Stattable;
---+
---+    boolean autoListen;
---+    String speakLanguage;
---+    String listenLanguage;
--- 
---     public ConversationFragment() {
---     }
---@@ -60,12 +76,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
---         View view = inflater.inflate(R.layout.conversation_fragment, container, false);
--- 
---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
---+
---         Start = (Button) view.findViewById(R.id.start_rec);
----        Speech = (TextView) view.findViewById(R.id.speech);
----        Discussion = (TextView) view.findViewById(R.id.discussion);
---+
---+        Error = (TextView) view.findViewById(R.id.error);
---         Status = (TextView) view.findViewById(R.id.status);
--- 
----        discuss = new StringBuffer();
---+        Speech = (EditText) view.findViewById(R.id.speech);
---+        Speak = (TextView) view.findViewById(R.id.speak);
---+
---+        Setquestion = (Button) view.findViewById(R.id.set_question);
---+        Lastquestion = (TextView) view.findViewById(R.id.last_question);
---+
---+        Setanswer = (Button) view.findViewById(R.id.set_answer);
---+        Lastanswer = (TextView) view.findViewById(R.id.last_answer);
---+
---+        Savetable = (Button) view.findViewById(R.id.save_table);
---+        Stattable = (TextView) view.findViewById(R.id.stat_table);
--- 
---         t1 = new TextToSpeech(getContext(), new TextToSpeech.OnInitListener() {
---             @Override
---@@ -79,11 +110,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---         Start.setOnClickListener(new View.OnClickListener() {
---             @Override
---             public void onClick(View v) {
----                //t1.setLanguage(Locale.FRENCH);
----                //speak("Parlez");
---                 listen();
---             }
---         });
---+        Setquestion.setOnClickListener(new View.OnClickListener() {
---+            @Override
---+            public void onClick(View v) {
---+                setquestion();
---+            }
---+        });
---+        Setanswer.setOnClickListener(new View.OnClickListener() {
---+            @Override
---+            public void onClick(View v) {
---+                setanswer();
---+            }
---+        });
---+        Savetable.setOnClickListener(new View.OnClickListener() {
---+            @Override
---+            public void onClick(View v) {
---+                savematcher();
---+            }
---+        });
--- 
---         mAudioManager = (AudioManager) getActivity().getSystemService(Context.AUDIO_SERVICE);
--- 
---@@ -92,13 +139,13 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---         mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
---         mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
---                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
---         //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3);
---         //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE,true);
----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,1000);
----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,1000);
---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,5000);
---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,500);
--- 
----        //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, true);
---+        //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, false);
--- 
---         mTimer = new Timer();
---         islistening=false;
---@@ -125,19 +172,50 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---     public void speak(String toSpeak) {
---         mSpeechRecognizer.stopListening();
---         islistening=false;
----        Speech.setText(toSpeak);
---+        Speak.setText(toSpeak);
---+
---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
---+
---+        if(speakLanguage.equals("FR")) {
---+            t1.setLanguage(Locale.FRENCH);
---+        } else if(speakLanguage.equals("EN")) {
---+            t1.setLanguage(Locale.US);
---+        } else {
---+            // default prechoosen language
---+        }
---         t1.speak(toSpeak, TextToSpeech.QUEUE_ADD, null);
---         while (t1.isSpeaking()) {
---             SystemClock.sleep(200);
---         }
----        //SystemClock.sleep(1000);
---+        if(autoListen) {
---+            SystemClock.sleep(1000);
---+            listen();
---+        }
---     }
--- 
--- 
---     public void listen() {
----        mSpeechRecognizer.stopListening();
---+        //if(islistening) return;
---+        //mSpeechRecognizer.stopListening();
---         //SystemClock.sleep(100);
---         //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, true);
---+        islistening=true;
---+
---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
---+
---+        if(listenLanguage.equals("FR")) {
---+            mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR");
---+        } else if(listenLanguage.equals("EN")) {
---+            mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
---+        } else {
---+            // automatic
---+        }
---         mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
---     }
--- 
---@@ -148,6 +226,8 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---     @Override
---     public void onBeginningOfSpeech() {
---         islistening=true;
---+        Status.setText("Status: " + "BeginningOfSpeech");
---+
---     }
--- 
---     @Override
---@@ -158,47 +238,50 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---     @Override
---     public void onEndOfSpeech() {
---         islistening=false;
---+        Status.setText("Status: " + "EndOfSpeech");
---+        //SystemClock.sleep(100);
---+        //listen();
---     }
--- 
---     @Override
---     public void onError(int error) {
---+        //mSpeechRecognizer.stopListening();
---         islistening=false;
----        //Status.setText("Status: " + error);
---+        Error.setText("Error: " + error);
---+        //SystemClock.sleep(300);
---+        //listen();
---     }
--- 
---     @Override
---     public void onEvent(int eventType, Bundle params) {
---+        Status.setText("Event: " + eventType);
--- 
---     }
--- 
---     @Override
---     public void onPartialResults(Bundle partialResults) {
---+        Status.setText("Status: " + "PartialResults");
--- 
---     }
--- 
---     @Override
---     public void onReadyForSpeech(Bundle params) {
---         islistening=true;
---+        Status.setText("Status: " + "ReadyForSpeech");
---+
---     }
--- 
---     @Override
---     public void onResults(Bundle results) {
---+        Status.setText("Status: " + "Results");
---         islistening=false;
---+
---         ArrayList<String> dutexte = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
----        float duconf[] = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
---+
---         if (dutexte != null && dutexte.size() > 0) {
---             Speech.setText(dutexte.get(0));
----            discuss.setLength(0);
----            for(int i=0;i<dutexte.size();++i) {
----                discuss.append(dutexte.get(i));
----                discuss.append(String.format(" %f",duconf[i]));
----                discuss.append("\n");
----            }
----            Discussion.setText(discuss);
----            Discussion.invalidate();
---             processvoice(dutexte.get(0));
---         }
----        //listen();
---     }
--- 
---     @Override
---@@ -211,7 +294,9 @@ public class ConversationFragment extends Fragment implements RecognitionListene
--- 
---     public class Matcher {
---         String lang;
----        String match;
---+        String match1;
---+        String match2;
---+        String match3;
---         String response;
---     }
--- 
---@@ -225,16 +310,20 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---         int i;
---         String voice = voiceorig.toLowerCase();
---         for(i=0;i<nbmatcher;++i) {
----            if(voice.contains(mMatcher[i].match)) {
----                if(mMatcher[i].lang.contains("FR")) {
----                    t1.setLanguage(Locale.FRENCH);
----                } else {
----                    t1.setLanguage(Locale.US);
---+            if(voice.contains(mMatcher[i].match1)) {
---+                if(voice.contains(mMatcher[i].match2)) {
---+                    if (voice.contains(mMatcher[i].match3)) {
---+                        if (mMatcher[i].lang.contains("FR")) {
---+                            t1.setLanguage(Locale.FRENCH);
---+                        } else {
---+                            t1.setLanguage(Locale.US);
---+                        }
---+                        String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
---+                        String tospeak = String.format(mMatcher[i].response, monnom);
---+                        speak(tospeak);
---+                        break;
---+                    }
---                 }
----                String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
----                String tospeak = String.format(mMatcher[i].response,monnom);
----                speak(tospeak);
----                break;
---             }
---         }
---         if(i>=nbmatcher) {
---@@ -243,34 +332,192 @@ public class ConversationFragment extends Fragment implements RecognitionListene
---         }
---     }
--- 
----    public void loadmatcher() {
----        mMatcher=new Matcher[MAXMATCHER];
----        nbmatcher=0;
----        setmatcher("FR","french","Certainement Maître.");
----        setmatcher("EN","english","Certainly Master.");
----
----        setmatcher("FR","je m'appelle","salut, %s. mon bon ami.");
----        setmatcher("FR","phoque","ça vaut pas la peine");
----        setmatcher("FR","bonjour","bonjour monsieur");
----        setmatcher("FR","salut","salut toi même");
----        setmatcher("FR","pierre","Pierre est dans le gros trouble");
----        setmatcher("FR","oui","Bien moi aussi");
----        setmatcher("FR","non","Je te cré pas");
----        setmatcher("EN","fuck","go shit yourself");
----        setmatcher("EN","what","something secret");
----        setmatcher("EN","who","someone you know");
----        setmatcher("EN","why","I dont know");
----        setmatcher("EN","when","very soon");
----        setmatcher("EN","where","not very far");
----    }
----
----    public void setmatcher(String lan, String mat, String res) {
---+    public void setmatcher(String lan, String mat1, String mat2, String mat3, String res) {
---         if(nbmatcher>=MAXMATCHER) return;
---         mMatcher[nbmatcher]=new Matcher();
---         mMatcher[nbmatcher].lang=new String(lan);
----        mMatcher[nbmatcher].match=new String(mat);
---+        mMatcher[nbmatcher].match1=new String(mat1);
---+        mMatcher[nbmatcher].match2=new String(mat2);
---+        mMatcher[nbmatcher].match3=new String(mat3);
---         mMatcher[nbmatcher].response=new String(res);
---         nbmatcher++;
---     }
--- 
---+    public void setmatcher(String line) {
---+        if(nbmatcher>=MAXMATCHER) return;
---+        String field=null;
---+        int p=0;
---+        int q=0;
---+        mMatcher[nbmatcher]=new Matcher();
---+        q=line.indexOf(':');
---+        field=line.substring(p,q);
---+        mMatcher[nbmatcher].lang=field;
---+        p=q+1;
---+        q=line.indexOf(':',p);
---+        field=line.substring(p,q);
---+        mMatcher[nbmatcher].match1=field;
---+        p=q+1;
---+        q=line.indexOf(':',p);
---+        field=line.substring(p,q);
---+        mMatcher[nbmatcher].match2=field;
---+        p=q+1;
---+        q=line.indexOf(':',p);
---+        field=line.substring(p,q);
---+        mMatcher[nbmatcher].match3=field;
---+        p=q+1;
---+        q=line.indexOf(':',p);
---+        field=line.substring(p,q);
---+        mMatcher[nbmatcher].response=field;
---+        nbmatcher++;
---+    }
---+
---+    public void loadmatcher() {
---+        mMatcher=new Matcher[MAXMATCHER];
---+        nbmatcher=0;
---+        setmatcher("FR","french","","","Certainement Maître.");
---+        setmatcher("EN","english","","","Certainly Master.");
---+
---+        setmatcher("FR","je m'appelle martin","","","Bonjour maître.");
---+        setmatcher("FR","je m'appelle","","","salut, %s.");
---+
---+        setmatcher("FR","dis bonjour à mon ami","","","bonjour jacynthe.");
---+        setmatcher("FR","dis bonjour à ma mère","","","bonjour raymonde laberge.");
---+        setmatcher("FR","dis bonjour à mon père","","","bonjour jean-pierre laberge.");
---+        setmatcher("FR","dis bonjour à pierre","","","salut pierre, mais que fais tu en prison?");
---+        setmatcher("FR","dis bonjour à jacynthe","","","bonjour chérie.");
---+        setmatcher("FR","dis bonjour à ","","","bonjour %s.");
---+
---+        setmatcher("FR","parle-moi de jacynthe","","","%s est une très jolie fille.");
---+        setmatcher("FR","parle-moi de jacinthe","","","%s est une jolie fille.");
---+        setmatcher("FR","parle-moi de pierre","","","Bof, %s est à orsainville.");
---+        setmatcher("FR","parle-moi de guy","","","%s est pas mal phoqué.");
---+        setmatcher("FR","parle-moi de ","","","je ne connais pas %s.");
---+
---+        setmatcher("FR","pierre","pinotte","","Pierre vends pas de pinotte. Ça se peut pas.");
---+        setmatcher("FR","pierre","drogue","","Pierre a jamais vendu de drogue de toute sa vie. Promis juré.");
---+        setmatcher("FR","pierre","fraude","","Pierre a jamais fait ça. Je te jure.");
---+        setmatcher("FR","pierre","vie","","Pierre ne vends pas de drogue. Réveille!");
---+        setmatcher("FR","pierre","fait","","Pierre n'a pas fait ça. Voyons donc.");
---+        setmatcher("FR","pierre","où","","Pierre est en prison");
---+        setmatcher("FR","pierre","","","Pierre est dans le gros trouble");
---+
---+        setmatcher("FR","bonjour","","","bonjour monsieur.");
---+        setmatcher("FR","salut","","","salut toi même.");
---+        setmatcher("FR","oui","","","Bien moi aussi");
---+        setmatcher("FR","non","","","Je te cré pas");
---+
---+        setmatcher("EN","fuck","","","go shit yourself");
---+        setmatcher("EN","what","","","something secret");
---+        setmatcher("EN","who","","","someone you know");
---+        setmatcher("EN","why","","","I dont know");
---+        setmatcher("EN","when","","","very soon");
---+        setmatcher("EN","where","","","not very far");
---+
---+        setmatcher("FR","phoque","","","ça vaut pas la peine, de laisser ceux qu'on aime, pour aller faire tourner, des ballons sur son nez.");
---+        setmatcher("FR","alaska","","","ça vaut pas la peine, de laisser ceux qu'on aime, pour aller faire tourner, des ballons sur son nez.");
---+
---+        if(!isExternalStorageReadable()) return;
---+
---+        loadMatcherFile();
---+
---+        Stattable.setText("File loaded");
---+
---+    }
---+
---+    public void setquestion() {
---+        Lastquestion.setText(Speech.getText());
---+    }
---+
---+    public void setanswer() {
---+        Lastanswer.setText(Speech.getText());
---+    }
---+
---+    public void savematcher() {
---+        setmatcher("FR",Lastquestion.getText().toString(),"","",Lastanswer.getText().toString());
---+        speak(Lastquestion.getText().toString());
---+        speak(Lastanswer.getText().toString());
---+
---+        // save the table
---+        if(!isExternalStorageWritable()) return;
---+
---+        saveMatcherFile();
---+
---+        Stattable.setText("File saved");
---+
---+    }
---+
---+    /* Checks if external storage is available for read and write */
---+    public boolean isExternalStorageWritable() {
---+        String state = Environment.getExternalStorageState();
---+        if (Environment.MEDIA_MOUNTED.equals(state)) {
---+            return true;
---+        }
---+        return false;
---+    }
---+
---+    /* Checks if external storage is available to at least read */
---+    public boolean isExternalStorageReadable() {
---+        String state = Environment.getExternalStorageState();
---+        if (Environment.MEDIA_MOUNTED.equals(state) ||
---+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
---+            return true;
---+        }
---+        return false;
---+    }
---+
---+    public File getAlbumStorageDir(String albumName) {
---+        // Get the directory for the user's public pictures directory.
---+        File file = new File(Environment.getExternalStoragePublicDirectory(
---+                Environment.DIRECTORY_DOCUMENTS), albumName);
---+        if (!file.mkdirs()) {
---+            Toast.makeText(getActivity(), "Directory not Created", Toast.LENGTH_SHORT).show();
---+        }
---+        return file;
---+    }
---+
---+    public void saveMatcherFile() {
---+        File directory = getAlbumStorageDir("Conversation");
---+        try {
---+            FileWriter out = new FileWriter(new File(directory, "conversation.txt"));
---+            for(int i=0;i<nbmatcher;++i) {
---+                out.write(mMatcher[i].lang);
---+                out.write(":");
---+                out.write(mMatcher[i].match1);
---+                out.write(":");
---+                out.write(mMatcher[i].match2);
---+                out.write(":");
---+                out.write(mMatcher[i].match3);
---+                out.write(":");
---+                out.write(mMatcher[i].response);
---+                out.write(":");
---+                out.write("\n");
---+            }
---+            out.close();
---+        } catch (IOException e) {
---+            Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
---+        } finally {
---+            Toast.makeText(getActivity(), "Save Successful", Toast.LENGTH_SHORT).show();
---+        }
---+    }
---+
---+    public void loadMatcherFile() {
---+        File directory = getAlbumStorageDir("Conversation");
---+        BufferedReader in = null;
---+        String line;
---+        try {
---+            in = new BufferedReader(new FileReader(new File(directory, "conversation.txt")));
---+            nbmatcher=0;
---+            while ((line = in.readLine()) != null) {
---+                // decode the line
---+                setmatcher(line);
---+            }
---+        } catch (FileNotFoundException e) {
---+            Toast.makeText(getActivity(), "FileNotFoundException", Toast.LENGTH_SHORT).show();
---+        } catch (IOException e) {
---+            Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
---+        } finally {
---+            Toast.makeText(getActivity(), "Load Successful", Toast.LENGTH_SHORT).show();
---+        }
---+    }
---+
--- }
---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
---index 35e97eb..755c4e6 100644
------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
---@@ -1,7 +1,23 @@
--- package net.ddns.mlsoftlaberge.budget.utils;
--- 
---+import android.app.Activity;
---+import android.os.Bundle;
---+import android.preference.PreferenceManager;
---+
---+import net.ddns.mlsoftlaberge.budget.R;
---+
--- /**
---  * Created by mlsoft on 15/04/16.
---  */
----public class SettingsActivity {
----}
---+public class SettingsActivity extends Activity {
---+    @Override
---+    protected void onCreate(Bundle savedInstanceState) {
---+        super.onCreate(savedInstanceState);
---+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
---+
---+        // Display the fragment as the main content.
---+        getFragmentManager().beginTransaction()
---+                .replace(android.R.id.content, new SettingsFragment())
---+                .commit();
---+    }
---+}
---\ No newline at end of file
---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
---index 7ba488f..aa4daec 100644
------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
---@@ -1,7 +1,21 @@
--- package net.ddns.mlsoftlaberge.budget.utils;
--- 
---+import android.os.Bundle;
---+import android.preference.PreferenceFragment;
---+
---+import net.ddns.mlsoftlaberge.budget.R;
---+
--- /**
---  * Created by mlsoft on 15/04/16.
---  */
----public class SettingsFragment {
---+public class SettingsFragment extends PreferenceFragment {
---+
---+    @Override
---+    public void onCreate(Bundle savedInstanceState) {
---+        super.onCreate(savedInstanceState);
---+
---+        // Load the preferences from an XML resource
---+        addPreferencesFromResource(R.xml.preferences);
---+    }
---+
--- }
---diff --git a/app/src/main/res/layout/conversation_fragment.xml b/app/src/main/res/layout/conversation_fragment.xml
---index 8761979..2a2faba 100644
------ a/app/src/main/res/layout/conversation_fragment.xml
---+++ b/app/src/main/res/layout/conversation_fragment.xml
---@@ -13,23 +13,96 @@
---         android:text="Speak" />
--- 
---     <TextView
----        android:id="@+id/speech"
---+        android:id="@+id/error"
---         android:layout_width="wrap_content"
---         android:layout_height="wrap_content"
----        android:layout_gravity="center_horizontal"
----        android:text=""
----        android:textSize="18sp" />
---+        android:text="Error:" />
--- 
---     <TextView
----        android:id="@+id/discussion"
---+        android:id="@+id/status"
---         android:layout_width="wrap_content"
---         android:layout_height="wrap_content"
----        android:text="" />
---+        android:text="Status:" />
---+
---+    <EditText
---+        android:id="@+id/speech"
---+        android:layout_width="match_parent"
---+        android:layout_height="wrap_content"
---+        android:layout_gravity="center_horizontal"
---+        android:text="Last Speech"
---+        android:hint="Last speech"
---+        android:textSize="18sp" />
---+
--- 
---     <TextView
----        android:id="@+id/status"
---         android:layout_width="wrap_content"
---         android:layout_height="wrap_content"
----        android:text="Status:" />
---+        android:id="@+id/speak"
---+        android:text="Answer to Speak"
---+        android:textSize="18sp" />
---+
---+    <LinearLayout
---+        android:orientation="horizontal"
---+        android:layout_width="match_parent"
---+        android:layout_height="wrap_content"
---+        android:layout_gravity="center_horizontal">
---+
---+        <Button
---+            android:id="@+id/set_question"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text="Set Question"
---+            />
---+
---+        <TextView
---+            android:id="@+id/last_question"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text="Last Question"
---+             />
---+    </LinearLayout>
---+
---+    <LinearLayout
---+        android:orientation="horizontal"
---+        android:layout_width="match_parent"
---+        android:layout_height="wrap_content"
---+        android:layout_gravity="center_horizontal">
---+
---+        <Button
---+            android:id="@+id/set_answer"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text=" Set Answer  "
---+            />
---+
---+        <TextView
---+            android:id="@+id/last_answer"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text="Last Answer"
---+            />
---+    </LinearLayout>
---+
---+    <LinearLayout
---+        android:orientation="horizontal"
---+        android:layout_width="match_parent"
---+        android:layout_height="wrap_content"
---+        android:layout_gravity="center_horizontal">
---+
---+        <Button
---+            android:id="@+id/save_table"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text="  Save Table  "
---+            />
---+
---+        <TextView
---+            android:id="@+id/stat_table"
---+            android:layout_width="wrap_content"
---+            android:layout_height="wrap_content"
---+            android:text="Save Status"
---+            />
---+    </LinearLayout>
---+
--- 
--- </LinearLayout>
+--diff --git a/app/src/main/res/menu/activity_main_drawer.xml b/app/src/main/res/menu/activity_main_drawer.xml
+--index 7d4cad1..78df891 100644
+----- a/app/src/main/res/menu/activity_main_drawer.xml
+--+++ b/app/src/main/res/menu/activity_main_drawer.xml
+--@@ -11,9 +11,13 @@
+--             android:icon="@drawable/ic_menu_camera"
+--             android:title="Discussion" />
+--         <item
+---            android:id="@+id/nav_sensor"
+--+            android:id="@+id/nav_perroquet"
+--             android:icon="@drawable/ic_menu_camera"
+---            android:title="Sensor" />
+--+            android:title="Perroquet" />
+--+        <item
+--+            android:id="@+id/nav_trycorder"
+--+            android:icon="@drawable/ic_menu_camera"
+--+            android:title="Trycorder" />
+--         <item
+--             android:id="@+id/nav_notes"
+--             android:icon="@drawable/ic_action_edit"
 --diff --git a/app/src/main/res/values/arrays.xml b/app/src/main/res/values/arrays.xml
---index a6b3dae..68f5f5d 100644
+--index 68f5f5d..71b3b78 100644
 ----- a/app/src/main/res/values/arrays.xml
 --+++ b/app/src/main/res/values/arrays.xml
---@@ -1,2 +1,40 @@
--- <?xml version="1.0" encoding="utf-8"?>
----<resources></resources>
---\ No newline at end of file
---+<resources>
---+
---+    <string-array name="fragment_array_entries">
---+        <item>Conversation</item>
---+        <item>Contacts</item>
---+        <item>None</item>
---+    </string-array>
---+
---+    <string-array name="fragment_array_entryvalues">
---+        <item>Conversation</item>
---+        <item>Contacts</item>
---+        <item>None</item>
---+    </string-array>
---+
---+    <string-array name="listen_array_entries">
---+        <item>French</item>
---+        <item>English</item>
---+        <item>Auto</item>
---+    </string-array>
---+
---+    <string-array name="listen_array_entryvalues">
---+        <item>FR</item>
---+        <item>EN</item>
---+        <item>Auto</item>
---+    </string-array>
---+
---+    <string-array name="speak_array_entries">
---+        <item>French</item>
---+        <item>English</item>
---+        <item>Auto</item>
---+    </string-array>
---+
---+    <string-array name="speak_array_entryvalues">
---+        <item>FR</item>
---+        <item>EN</item>
---+        <item>Auto</item>
---+    </string-array>
---+
---+</resources>
---diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
---index 1381fe9..d01dd11 100644
------ a/app/src/main/res/values/strings.xml
---+++ b/app/src/main/res/values/strings.xml
---@@ -5,6 +5,7 @@
---     <string name="navigation_drawer_close">Close navigation drawer</string>
+--@@ -4,12 +4,16 @@
+--     <string-array name="fragment_array_entries">
+--         <item>Conversation</item>
+--         <item>Contacts</item>
+--+        <item>Products</item>
+--+        <item>Trycorder</item>
+--         <item>None</item>
+--     </string-array>
 -- 
---     <string name="action_settings">Settings</string>
---+    <string name="activity_settings">Settings</string>
+--     <string-array name="fragment_array_entryvalues">
+--         <item>Conversation</item>
+--         <item>Contacts</item>
+--+        <item>Products</item>
+--+        <item>Trycorder</item>
+--         <item>None</item>
+--     </string-array>
 -- 
---     <string name="activity_contacts_list">Contacts List</string>
---     <string name="activity_contact_detail">Contact Detail</string>
---diff --git a/app/src/main/res/xml/preferences.xml b/app/src/main/res/xml/preferences.xml
---index 624ed13..a484a30 100644
------ a/app/src/main/res/xml/preferences.xml
---+++ b/app/src/main/res/xml/preferences.xml
---@@ -1,4 +1,57 @@
--- <?xml version="1.0" encoding="utf-8"?>
--- <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
--- 
----</PreferenceScreen>
---\ No newline at end of file
---+    <PreferenceCategory
---+        android:title="Module Main"
---+        android:key="pref_key_main_settings">
---+        <ListPreference
---+            android:key="pref_key_default_language"
---+            android:entries="@array/listen_array_entries"
---+            android:entryValues="@array/listen_array_entryvalues"
---+            android:summary="Language used to display to the user"
---+            android:title="Display Language"
---+            android:defaultValue="FR"/>
---+        <ListPreference
---+            android:key="pref_key_default_fragment"
---+            android:entries="@array/fragment_array_entries"
---+            android:entryValues="@array/fragment_array_entryvalues"
---+            android:summary="Fragment to start on opening"
---+            android:title="Default Fragment"
---+            android:defaultValue="Conversation"/>
---+    </PreferenceCategory>
---+
---+    <PreferenceCategory
---+        android:title="Module Conversation"
---+        android:key="pref_key_conversation_settings">
---+        <CheckBoxPreference
---+            android:key="pref_key_auto_listen"
---+            android:summary="Determine if the listen function is looping"
---+            android:title="Automatic loop"
---+            android:defaultValue="false" />
---+        <ListPreference
---+            android:key="pref_key_listen_language"
---+            android:entries="@array/listen_array_entries"
---+            android:entryValues="@array/listen_array_entryvalues"
---+            android:summary="Language used to listen to the user"
---+            android:title="Listen Language"
---+            android:defaultValue="FR"/>
---+        <ListPreference
---+            android:key="pref_key_speak_language"
---+            android:entries="@array/speak_array_entries"
---+            android:entryValues="@array/speak_array_entryvalues"
---+            android:summary="Language used to pronounce text to speak"
---+            android:title="Speak Language"
---+            android:defaultValue="FR"/>
---+    </PreferenceCategory>
---+
---+    <PreferenceCategory
---+        android:title="Module Contacts"
---+        android:key="pref_key_contacts_settings">
---+        <CheckBoxPreference
---+            android:key="pref_key_starred"
---+            android:summary="Determine if the list contains only starred"
---+            android:title="Starred"
---+            android:defaultValue="true" />
---+    </PreferenceCategory>
---+
---+</PreferenceScreen>
+--diff --git a/gitdiff.txt b/gitdiff.txt
+--index f02c71b..d957dcd 100644
+----- a/gitdiff.txt
+--+++ b/gitdiff.txt
+--@@ -1,973 +0,0 @@
+---diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+---index b1f1f95..c34ef89 100644
+------ a/app/src/main/AndroidManifest.xml
+---+++ b/app/src/main/AndroidManifest.xml
+---@@ -56,6 +56,19 @@
+---             <meta-data android:name="android.support.PARENT_ACTIVITY"
+---                 android:value=".MainActivity" />
+---         </activity>
+---+        <activity
+---+            android:name=".utils.SettingsActivity"
+---+            android:label="@string/activity_settings"
+---+            android:parentActivityName=".MainActivity">
+---+            <!-- Define hierarchical parent of this activity, both via the system
+---+                 parentActivityName attribute (added in API Level 16) and via meta-data annotation.
+---+                 This allows use of the support library NavUtils class in a way that works over
+---+                 all Android versions. See the "Tasks and Back Stack" guide for more information:
+---+                 http://developer.android.com/guide/components/tasks-and-back-stack.html
+---+            -->
+---+            <meta-data android:name="android.support.PARENT_ACTIVITY"
+---+                android:value=".MainActivity" />
+---+        </activity>
+--- 
+---         <provider
+---             android:name=".products.contentprovider.MyProductContentProvider"
+---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+---index 1c9e74f..16e6719 100644
+------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+---@@ -1,7 +1,10 @@
+--- package net.ddns.mlsoftlaberge.budget;
+--- 
+---+import android.content.Intent;
+---+import android.content.SharedPreferences;
+--- import android.net.Uri;
+--- import android.os.Bundle;
+---+import android.preference.PreferenceManager;
+--- import android.support.design.widget.FloatingActionButton;
+--- import android.support.design.widget.Snackbar;
+--- import android.view.View;
+---@@ -24,6 +27,7 @@ import net.ddns.mlsoftlaberge.budget.sensors.ConversationFragment;
+--- import net.ddns.mlsoftlaberge.budget.sensors.SensorFragment;
+--- import net.ddns.mlsoftlaberge.budget.sensors.DiscussionFragment;
+--- import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
+---+import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
+--- 
+--- public class MainActivity extends AppCompatActivity
+---         implements ContactsListFragment.OnContactsInteractionListener,
+---@@ -35,6 +39,8 @@ public class MainActivity extends AppCompatActivity
+--- 
+---     private static final String TAG = "MainActivity";
+--- 
+---+    private String defaultLanguage;
+---+    private String defaultFragment;
+--- 
+---     @Override
+---     protected void onCreate(Bundle savedInstanceState) {
+---@@ -42,6 +48,13 @@ public class MainActivity extends AppCompatActivity
+---         //    Utils.enableStrictMode();
+---         //}
+---         super.onCreate(savedInstanceState);
+---+
+---+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+---+
+---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+---+        defaultLanguage = sharedPref.getString("pref_key_default_language", "");
+---+        defaultFragment = sharedPref.getString("pref_key_default_fragment", "");
+---+
+---         setContentView(R.layout.activity_main);
+---         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+---         setSupportActionBar(toolbar);
+---@@ -103,6 +116,7 @@ public class MainActivity extends AppCompatActivity
+--- 
+---         //noinspection SimplifiableIfStatement
+---         if (id == R.id.action_settings) {
+---+            settingsactivity();
+---             return true;
+---         }
+--- 
+---@@ -402,6 +416,13 @@ public class MainActivity extends AppCompatActivity
+---         currentfragment = 9;
+---     }
+--- 
+---+    // =====================================================================================
+---+    // settings activity incorporation in the display
+---+    public void settingsactivity() {
+---+        Intent i = new Intent(this, SettingsActivity.class);
+---+        startActivity(i);
+---+    }
+---+
+--- 
+--- 
+--- }
+---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
+---index 335057c..b8e7e11 100644
+------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
+---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/contacts/ContactsListFragment.java
+---@@ -22,12 +22,14 @@ import android.app.Activity;
+--- import android.app.SearchManager;
+--- import android.content.Context;
+--- import android.content.Intent;
+---+import android.content.SharedPreferences;
+--- import android.content.res.AssetFileDescriptor;
+--- import android.database.Cursor;
+--- import android.graphics.Bitmap;
+--- import android.net.Uri;
+--- import android.os.Build;
+--- import android.os.Bundle;
+---+import android.preference.PreferenceManager;
+--- import android.provider.ContactsContract.Contacts;
+--- import android.provider.ContactsContract.Contacts.Photo;
+--- import android.support.v4.app.Fragment;
+---@@ -116,6 +118,7 @@ public class ContactsListFragment extends ListFragment implements
+--- 
+---     // keep the flag if we want starred filter or not
+---     private int starredfind=1;
+---+    private boolean starred=true;
+--- 
+---     /**
+---      * Fragments require an empty constructor.
+---@@ -186,6 +189,12 @@ public class ContactsListFragment extends ListFragment implements
+--- 
+---         // Add a cache to the image loader
+---         mImageLoader.addImageCache(getActivity().getSupportFragmentManager(), 0.1f);
+---+
+---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+---+        starred = sharedPref.getBoolean("pref_key_starred",true);
+---+        if(starred) starredfind=1;
+---+        else starredfind=0;
+---+
+---     }
+--- 
+---     @Override
+---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
+---index 2de4a07..5a7a312 100644
+------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
+---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/sensors/ConversationFragment.java
+---@@ -1,49 +1,52 @@
+--- package net.ddns.mlsoftlaberge.budget.sensors;
+--- 
+----import android.app.Dialog;
+--- import android.content.Context;
+--- import android.content.Intent;
+---+import android.content.SharedPreferences;
+--- import android.media.AudioManager;
+----import android.net.ConnectivityManager;
+----import android.net.NetworkInfo;
+----import android.os.Build;
+--- import android.os.Bundle;
+---+import android.os.Environment;
+--- import android.os.SystemClock;
+---+import android.preference.PreferenceManager;
+--- import android.speech.RecognitionListener;
+--- import android.speech.RecognizerIntent;
+----import android.speech.RecognizerResultsIntent;
+--- import android.speech.SpeechRecognizer;
+--- import android.speech.tts.TextToSpeech;
+--- import android.support.v4.app.Fragment;
+----import android.util.Log;
+--- import android.view.LayoutInflater;
+--- import android.view.View;
+--- import android.view.ViewGroup;
+--- import android.widget.Button;
+----import android.widget.ListView;
+---+import android.widget.EditText;
+--- import android.widget.TextView;
+--- import android.widget.Toast;
+--- 
+--- import net.ddns.mlsoftlaberge.budget.R;
+----
+---+import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
+---+
+---+import java.io.BufferedReader;
+---+import java.io.File;
+---+import java.io.FileNotFoundException;
+---+import java.io.FileReader;
+---+import java.io.FileWriter;
+---+import java.io.IOException;
+--- import java.util.ArrayList;
+--- import java.util.Locale;
+--- import java.util.Timer;
+----import java.util.TimerTask;
+--- 
+--- /**
+---  * Created by mlsoft on 05/04/16.
+---  */
+--- public class ConversationFragment extends Fragment implements RecognitionListener {
+--- 
+---+    private static final String TAG="ConversationFragment";
+---+
+---     private static final int REQUEST_CODE = 1234;
+---     Button Start;
+----    TextView Speech;
+----    TextView Discussion;
+---+    TextView Error;
+---     TextView Status;
+----    ArrayList<String> matches_text;
+---+
+---     TextToSpeech t1;
+----    StringBuffer discuss;
+--- 
+---     AudioManager mAudioManager;
+---     SpeechRecognizer mSpeechRecognizer;
+---@@ -52,6 +55,19 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---     Timer mTimer;
+---     boolean islistening;
+--- 
+---+    EditText Speech;
+---+    TextView Speak;
+---+
+---+    Button Setquestion;
+---+    TextView Lastquestion;
+---+    Button Setanswer;
+---+    TextView Lastanswer;
+---+    Button Savetable;
+---+    TextView Stattable;
+---+
+---+    boolean autoListen;
+---+    String speakLanguage;
+---+    String listenLanguage;
+--- 
+---     public ConversationFragment() {
+---     }
+---@@ -60,12 +76,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+---         View view = inflater.inflate(R.layout.conversation_fragment, container, false);
+--- 
+---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
+---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
+---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
+---+
+---         Start = (Button) view.findViewById(R.id.start_rec);
+----        Speech = (TextView) view.findViewById(R.id.speech);
+----        Discussion = (TextView) view.findViewById(R.id.discussion);
+---+
+---+        Error = (TextView) view.findViewById(R.id.error);
+---         Status = (TextView) view.findViewById(R.id.status);
+--- 
+----        discuss = new StringBuffer();
+---+        Speech = (EditText) view.findViewById(R.id.speech);
+---+        Speak = (TextView) view.findViewById(R.id.speak);
+---+
+---+        Setquestion = (Button) view.findViewById(R.id.set_question);
+---+        Lastquestion = (TextView) view.findViewById(R.id.last_question);
+---+
+---+        Setanswer = (Button) view.findViewById(R.id.set_answer);
+---+        Lastanswer = (TextView) view.findViewById(R.id.last_answer);
+---+
+---+        Savetable = (Button) view.findViewById(R.id.save_table);
+---+        Stattable = (TextView) view.findViewById(R.id.stat_table);
+--- 
+---         t1 = new TextToSpeech(getContext(), new TextToSpeech.OnInitListener() {
+---             @Override
+---@@ -79,11 +110,27 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---         Start.setOnClickListener(new View.OnClickListener() {
+---             @Override
+---             public void onClick(View v) {
+----                //t1.setLanguage(Locale.FRENCH);
+----                //speak("Parlez");
+---                 listen();
+---             }
+---         });
+---+        Setquestion.setOnClickListener(new View.OnClickListener() {
+---+            @Override
+---+            public void onClick(View v) {
+---+                setquestion();
+---+            }
+---+        });
+---+        Setanswer.setOnClickListener(new View.OnClickListener() {
+---+            @Override
+---+            public void onClick(View v) {
+---+                setanswer();
+---+            }
+---+        });
+---+        Savetable.setOnClickListener(new View.OnClickListener() {
+---+            @Override
+---+            public void onClick(View v) {
+---+                savematcher();
+---+            }
+---+        });
+--- 
+---         mAudioManager = (AudioManager) getActivity().getSystemService(Context.AUDIO_SERVICE);
+--- 
+---@@ -92,13 +139,13 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---         mSpeechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+---         mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+---                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
+---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "net.ddns.mlsoftlaberge.budget");
+---         //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3);
+---         //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE,true);
+----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,1000);
+----        //mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,1000);
+---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,5000);
+---+        mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,500);
+--- 
+----        //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, true);
+---+        //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, false);
+--- 
+---         mTimer = new Timer();
+---         islistening=false;
+---@@ -125,19 +172,50 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---     public void speak(String toSpeak) {
+---         mSpeechRecognizer.stopListening();
+---         islistening=false;
+----        Speech.setText(toSpeak);
+---+        Speak.setText(toSpeak);
+---+
+---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
+---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
+---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
+---+
+---+        if(speakLanguage.equals("FR")) {
+---+            t1.setLanguage(Locale.FRENCH);
+---+        } else if(speakLanguage.equals("EN")) {
+---+            t1.setLanguage(Locale.US);
+---+        } else {
+---+            // default prechoosen language
+---+        }
+---         t1.speak(toSpeak, TextToSpeech.QUEUE_ADD, null);
+---         while (t1.isSpeaking()) {
+---             SystemClock.sleep(200);
+---         }
+----        //SystemClock.sleep(1000);
+---+        if(autoListen) {
+---+            SystemClock.sleep(1000);
+---+            listen();
+---+        }
+---     }
+--- 
+--- 
+---     public void listen() {
+----        mSpeechRecognizer.stopListening();
+---+        //if(islistening) return;
+---+        //mSpeechRecognizer.stopListening();
+---         //SystemClock.sleep(100);
+---         //mAudioManager.setStreamSolo(AudioManager.STREAM_VOICE_CALL, true);
+---+        islistening=true;
+---+
+---+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+---+        autoListen = sharedPref.getBoolean("pref_key_auto_listen",false);
+---+        speakLanguage = sharedPref.getString("pref_key_speak_language", "");
+---+        listenLanguage = sharedPref.getString("pref_key_listen_language", "");
+---+
+---+        if(listenLanguage.equals("FR")) {
+---+            mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR");
+---+        } else if(listenLanguage.equals("EN")) {
+---+            mSpeechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+---+        } else {
+---+            // automatic
+---+        }
+---         mSpeechRecognizer.startListening(mSpeechRecognizerIntent);
+---     }
+--- 
+---@@ -148,6 +226,8 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---     @Override
+---     public void onBeginningOfSpeech() {
+---         islistening=true;
+---+        Status.setText("Status: " + "BeginningOfSpeech");
+---+
+---     }
+--- 
+---     @Override
+---@@ -158,47 +238,50 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---     @Override
+---     public void onEndOfSpeech() {
+---         islistening=false;
+---+        Status.setText("Status: " + "EndOfSpeech");
+---+        //SystemClock.sleep(100);
+---+        //listen();
+---     }
+--- 
+---     @Override
+---     public void onError(int error) {
+---+        //mSpeechRecognizer.stopListening();
+---         islistening=false;
+----        //Status.setText("Status: " + error);
+---+        Error.setText("Error: " + error);
+---+        //SystemClock.sleep(300);
+---+        //listen();
+---     }
+--- 
+---     @Override
+---     public void onEvent(int eventType, Bundle params) {
+---+        Status.setText("Event: " + eventType);
+--- 
+---     }
+--- 
+---     @Override
+---     public void onPartialResults(Bundle partialResults) {
+---+        Status.setText("Status: " + "PartialResults");
+--- 
+---     }
+--- 
+---     @Override
+---     public void onReadyForSpeech(Bundle params) {
+---         islistening=true;
+---+        Status.setText("Status: " + "ReadyForSpeech");
+---+
+---     }
+--- 
+---     @Override
+---     public void onResults(Bundle results) {
+---+        Status.setText("Status: " + "Results");
+---         islistening=false;
+---+
+---         ArrayList<String> dutexte = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+----        float duconf[] = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
+---+
+---         if (dutexte != null && dutexte.size() > 0) {
+---             Speech.setText(dutexte.get(0));
+----            discuss.setLength(0);
+----            for(int i=0;i<dutexte.size();++i) {
+----                discuss.append(dutexte.get(i));
+----                discuss.append(String.format(" %f",duconf[i]));
+----                discuss.append("\n");
+----            }
+----            Discussion.setText(discuss);
+----            Discussion.invalidate();
+---             processvoice(dutexte.get(0));
+---         }
+----        //listen();
+---     }
+--- 
+---     @Override
+---@@ -211,7 +294,9 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+--- 
+---     public class Matcher {
+---         String lang;
+----        String match;
+---+        String match1;
+---+        String match2;
+---+        String match3;
+---         String response;
+---     }
+--- 
+---@@ -225,16 +310,20 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---         int i;
+---         String voice = voiceorig.toLowerCase();
+---         for(i=0;i<nbmatcher;++i) {
+----            if(voice.contains(mMatcher[i].match)) {
+----                if(mMatcher[i].lang.contains("FR")) {
+----                    t1.setLanguage(Locale.FRENCH);
+----                } else {
+----                    t1.setLanguage(Locale.US);
+---+            if(voice.contains(mMatcher[i].match1)) {
+---+                if(voice.contains(mMatcher[i].match2)) {
+---+                    if (voice.contains(mMatcher[i].match3)) {
+---+                        if (mMatcher[i].lang.contains("FR")) {
+---+                            t1.setLanguage(Locale.FRENCH);
+---+                        } else {
+---+                            t1.setLanguage(Locale.US);
+---+                        }
+---+                        String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
+---+                        String tospeak = String.format(mMatcher[i].response, monnom);
+---+                        speak(tospeak);
+---+                        break;
+---+                    }
+---                 }
+----                String monnom = voice.substring(voice.lastIndexOf(' ') + 1);
+----                String tospeak = String.format(mMatcher[i].response,monnom);
+----                speak(tospeak);
+----                break;
+---             }
+---         }
+---         if(i>=nbmatcher) {
+---@@ -243,34 +332,192 @@ public class ConversationFragment extends Fragment implements RecognitionListene
+---         }
+---     }
+--- 
+----    public void loadmatcher() {
+----        mMatcher=new Matcher[MAXMATCHER];
+----        nbmatcher=0;
+----        setmatcher("FR","french","Certainement Maître.");
+----        setmatcher("EN","english","Certainly Master.");
+----
+----        setmatcher("FR","je m'appelle","salut, %s. mon bon ami.");
+----        setmatcher("FR","phoque","ça vaut pas la peine");
+----        setmatcher("FR","bonjour","bonjour monsieur");
+----        setmatcher("FR","salut","salut toi même");
+----        setmatcher("FR","pierre","Pierre est dans le gros trouble");
+----        setmatcher("FR","oui","Bien moi aussi");
+----        setmatcher("FR","non","Je te cré pas");
+----        setmatcher("EN","fuck","go shit yourself");
+----        setmatcher("EN","what","something secret");
+----        setmatcher("EN","who","someone you know");
+----        setmatcher("EN","why","I dont know");
+----        setmatcher("EN","when","very soon");
+----        setmatcher("EN","where","not very far");
+----    }
+----
+----    public void setmatcher(String lan, String mat, String res) {
+---+    public void setmatcher(String lan, String mat1, String mat2, String mat3, String res) {
+---         if(nbmatcher>=MAXMATCHER) return;
+---         mMatcher[nbmatcher]=new Matcher();
+---         mMatcher[nbmatcher].lang=new String(lan);
+----        mMatcher[nbmatcher].match=new String(mat);
+---+        mMatcher[nbmatcher].match1=new String(mat1);
+---+        mMatcher[nbmatcher].match2=new String(mat2);
+---+        mMatcher[nbmatcher].match3=new String(mat3);
+---         mMatcher[nbmatcher].response=new String(res);
+---         nbmatcher++;
+---     }
+--- 
+---+    public void setmatcher(String line) {
+---+        if(nbmatcher>=MAXMATCHER) return;
+---+        String field=null;
+---+        int p=0;
+---+        int q=0;
+---+        mMatcher[nbmatcher]=new Matcher();
+---+        q=line.indexOf(':');
+---+        field=line.substring(p,q);
+---+        mMatcher[nbmatcher].lang=field;
+---+        p=q+1;
+---+        q=line.indexOf(':',p);
+---+        field=line.substring(p,q);
+---+        mMatcher[nbmatcher].match1=field;
+---+        p=q+1;
+---+        q=line.indexOf(':',p);
+---+        field=line.substring(p,q);
+---+        mMatcher[nbmatcher].match2=field;
+---+        p=q+1;
+---+        q=line.indexOf(':',p);
+---+        field=line.substring(p,q);
+---+        mMatcher[nbmatcher].match3=field;
+---+        p=q+1;
+---+        q=line.indexOf(':',p);
+---+        field=line.substring(p,q);
+---+        mMatcher[nbmatcher].response=field;
+---+        nbmatcher++;
+---+    }
+---+
+---+    public void loadmatcher() {
+---+        mMatcher=new Matcher[MAXMATCHER];
+---+        nbmatcher=0;
+---+        setmatcher("FR","french","","","Certainement Maître.");
+---+        setmatcher("EN","english","","","Certainly Master.");
+---+
+---+        setmatcher("FR","je m'appelle martin","","","Bonjour maître.");
+---+        setmatcher("FR","je m'appelle","","","salut, %s.");
+---+
+---+        setmatcher("FR","dis bonjour à mon ami","","","bonjour jacynthe.");
+---+        setmatcher("FR","dis bonjour à ma mère","","","bonjour raymonde laberge.");
+---+        setmatcher("FR","dis bonjour à mon père","","","bonjour jean-pierre laberge.");
+---+        setmatcher("FR","dis bonjour à pierre","","","salut pierre, mais que fais tu en prison?");
+---+        setmatcher("FR","dis bonjour à jacynthe","","","bonjour chérie.");
+---+        setmatcher("FR","dis bonjour à ","","","bonjour %s.");
+---+
+---+        setmatcher("FR","parle-moi de jacynthe","","","%s est une très jolie fille.");
+---+        setmatcher("FR","parle-moi de jacinthe","","","%s est une jolie fille.");
+---+        setmatcher("FR","parle-moi de pierre","","","Bof, %s est à orsainville.");
+---+        setmatcher("FR","parle-moi de guy","","","%s est pas mal phoqué.");
+---+        setmatcher("FR","parle-moi de ","","","je ne connais pas %s.");
+---+
+---+        setmatcher("FR","pierre","pinotte","","Pierre vends pas de pinotte. Ça se peut pas.");
+---+        setmatcher("FR","pierre","drogue","","Pierre a jamais vendu de drogue de toute sa vie. Promis juré.");
+---+        setmatcher("FR","pierre","fraude","","Pierre a jamais fait ça. Je te jure.");
+---+        setmatcher("FR","pierre","vie","","Pierre ne vends pas de drogue. Réveille!");
+---+        setmatcher("FR","pierre","fait","","Pierre n'a pas fait ça. Voyons donc.");
+---+        setmatcher("FR","pierre","où","","Pierre est en prison");
+---+        setmatcher("FR","pierre","","","Pierre est dans le gros trouble");
+---+
+---+        setmatcher("FR","bonjour","","","bonjour monsieur.");
+---+        setmatcher("FR","salut","","","salut toi même.");
+---+        setmatcher("FR","oui","","","Bien moi aussi");
+---+        setmatcher("FR","non","","","Je te cré pas");
+---+
+---+        setmatcher("EN","fuck","","","go shit yourself");
+---+        setmatcher("EN","what","","","something secret");
+---+        setmatcher("EN","who","","","someone you know");
+---+        setmatcher("EN","why","","","I dont know");
+---+        setmatcher("EN","when","","","very soon");
+---+        setmatcher("EN","where","","","not very far");
+---+
+---+        setmatcher("FR","phoque","","","ça vaut pas la peine, de laisser ceux qu'on aime, pour aller faire tourner, des ballons sur son nez.");
+---+        setmatcher("FR","alaska","","","ça vaut pas la peine, de laisser ceux qu'on aime, pour aller faire tourner, des ballons sur son nez.");
+---+
+---+        if(!isExternalStorageReadable()) return;
+---+
+---+        loadMatcherFile();
+---+
+---+        Stattable.setText("File loaded");
+---+
+---+    }
+---+
+---+    public void setquestion() {
+---+        Lastquestion.setText(Speech.getText());
+---+    }
+---+
+---+    public void setanswer() {
+---+        Lastanswer.setText(Speech.getText());
+---+    }
+---+
+---+    public void savematcher() {
+---+        setmatcher("FR",Lastquestion.getText().toString(),"","",Lastanswer.getText().toString());
+---+        speak(Lastquestion.getText().toString());
+---+        speak(Lastanswer.getText().toString());
+---+
+---+        // save the table
+---+        if(!isExternalStorageWritable()) return;
+---+
+---+        saveMatcherFile();
+---+
+---+        Stattable.setText("File saved");
+---+
+---+    }
+---+
+---+    /* Checks if external storage is available for read and write */
+---+    public boolean isExternalStorageWritable() {
+---+        String state = Environment.getExternalStorageState();
+---+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+---+            return true;
+---+        }
+---+        return false;
+---+    }
+---+
+---+    /* Checks if external storage is available to at least read */
+---+    public boolean isExternalStorageReadable() {
+---+        String state = Environment.getExternalStorageState();
+---+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+---+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+---+            return true;
+---+        }
+---+        return false;
+---+    }
+---+
+---+    public File getAlbumStorageDir(String albumName) {
+---+        // Get the directory for the user's public pictures directory.
+---+        File file = new File(Environment.getExternalStoragePublicDirectory(
+---+                Environment.DIRECTORY_DOCUMENTS), albumName);
+---+        if (!file.mkdirs()) {
+---+            Toast.makeText(getActivity(), "Directory not Created", Toast.LENGTH_SHORT).show();
+---+        }
+---+        return file;
+---+    }
+---+
+---+    public void saveMatcherFile() {
+---+        File directory = getAlbumStorageDir("Conversation");
+---+        try {
+---+            FileWriter out = new FileWriter(new File(directory, "conversation.txt"));
+---+            for(int i=0;i<nbmatcher;++i) {
+---+                out.write(mMatcher[i].lang);
+---+                out.write(":");
+---+                out.write(mMatcher[i].match1);
+---+                out.write(":");
+---+                out.write(mMatcher[i].match2);
+---+                out.write(":");
+---+                out.write(mMatcher[i].match3);
+---+                out.write(":");
+---+                out.write(mMatcher[i].response);
+---+                out.write(":");
+---+                out.write("\n");
+---+            }
+---+            out.close();
+---+        } catch (IOException e) {
+---+            Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
+---+        } finally {
+---+            Toast.makeText(getActivity(), "Save Successful", Toast.LENGTH_SHORT).show();
+---+        }
+---+    }
+---+
+---+    public void loadMatcherFile() {
+---+        File directory = getAlbumStorageDir("Conversation");
+---+        BufferedReader in = null;
+---+        String line;
+---+        try {
+---+            in = new BufferedReader(new FileReader(new File(directory, "conversation.txt")));
+---+            nbmatcher=0;
+---+            while ((line = in.readLine()) != null) {
+---+                // decode the line
+---+                setmatcher(line);
+---+            }
+---+        } catch (FileNotFoundException e) {
+---+            Toast.makeText(getActivity(), "FileNotFoundException", Toast.LENGTH_SHORT).show();
+---+        } catch (IOException e) {
+---+            Toast.makeText(getActivity(), "IOException", Toast.LENGTH_SHORT).show();
+---+        } finally {
+---+            Toast.makeText(getActivity(), "Load Successful", Toast.LENGTH_SHORT).show();
+---+        }
+---+    }
+---+
+--- }
+---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
+---index 35e97eb..755c4e6 100644
+------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
+---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsActivity.java
+---@@ -1,7 +1,23 @@
+--- package net.ddns.mlsoftlaberge.budget.utils;
+--- 
+---+import android.app.Activity;
+---+import android.os.Bundle;
+---+import android.preference.PreferenceManager;
+---+
+---+import net.ddns.mlsoftlaberge.budget.R;
+---+
+--- /**
+---  * Created by mlsoft on 15/04/16.
+---  */
+----public class SettingsActivity {
+----}
+---+public class SettingsActivity extends Activity {
+---+    @Override
+---+    protected void onCreate(Bundle savedInstanceState) {
+---+        super.onCreate(savedInstanceState);
+---+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+---+
+---+        // Display the fragment as the main content.
+---+        getFragmentManager().beginTransaction()
+---+                .replace(android.R.id.content, new SettingsFragment())
+---+                .commit();
+---+    }
+---+}
+---\ No newline at end of file
+---diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
+---index 7ba488f..aa4daec 100644
+------ a/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
+---+++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/utils/SettingsFragment.java
+---@@ -1,7 +1,21 @@
+--- package net.ddns.mlsoftlaberge.budget.utils;
+--- 
+---+import android.os.Bundle;
+---+import android.preference.PreferenceFragment;
+---+
+---+import net.ddns.mlsoftlaberge.budget.R;
+---+
+--- /**
+---  * Created by mlsoft on 15/04/16.
+---  */
+----public class SettingsFragment {
+---+public class SettingsFragment extends PreferenceFragment {
+---+
+---+    @Override
+---+    public void onCreate(Bundle savedInstanceState) {
+---+        super.onCreate(savedInstanceState);
+---+
+---+        // Load the preferences from an XML resource
+---+        addPreferencesFromResource(R.xml.preferences);
+---+    }
+---+
+--- }
+---diff --git a/app/src/main/res/layout/conversation_fragment.xml b/app/src/main/res/layout/conversation_fragment.xml
+---index 8761979..2a2faba 100644
+------ a/app/src/main/res/layout/conversation_fragment.xml
+---+++ b/app/src/main/res/layout/conversation_fragment.xml
+---@@ -13,23 +13,96 @@
+---         android:text="Speak" />
+--- 
+---     <TextView
+----        android:id="@+id/speech"
+---+        android:id="@+id/error"
+---         android:layout_width="wrap_content"
+---         android:layout_height="wrap_content"
+----        android:layout_gravity="center_horizontal"
+----        android:text=""
+----        android:textSize="18sp" />
+---+        android:text="Error:" />
+--- 
+---     <TextView
+----        android:id="@+id/discussion"
+---+        android:id="@+id/status"
+---         android:layout_width="wrap_content"
+---         android:layout_height="wrap_content"
+----        android:text="" />
+---+        android:text="Status:" />
+---+
+---+    <EditText
+---+        android:id="@+id/speech"
+---+        android:layout_width="match_parent"
+---+        android:layout_height="wrap_content"
+---+        android:layout_gravity="center_horizontal"
+---+        android:text="Last Speech"
+---+        android:hint="Last speech"
+---+        android:textSize="18sp" />
+---+
+--- 
+---     <TextView
+----        android:id="@+id/status"
+---         android:layout_width="wrap_content"
+---         android:layout_height="wrap_content"
+----        android:text="Status:" />
+---+        android:id="@+id/speak"
+---+        android:text="Answer to Speak"
+---+        android:textSize="18sp" />
+---+
+---+    <LinearLayout
+---+        android:orientation="horizontal"
+---+        android:layout_width="match_parent"
+---+        android:layout_height="wrap_content"
+---+        android:layout_gravity="center_horizontal">
+---+
+---+        <Button
+---+            android:id="@+id/set_question"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text="Set Question"
+---+            />
+---+
+---+        <TextView
+---+            android:id="@+id/last_question"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text="Last Question"
+---+             />
+---+    </LinearLayout>
+---+
+---+    <LinearLayout
+---+        android:orientation="horizontal"
+---+        android:layout_width="match_parent"
+---+        android:layout_height="wrap_content"
+---+        android:layout_gravity="center_horizontal">
+---+
+---+        <Button
+---+            android:id="@+id/set_answer"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text=" Set Answer  "
+---+            />
+---+
+---+        <TextView
+---+            android:id="@+id/last_answer"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text="Last Answer"
+---+            />
+---+    </LinearLayout>
+---+
+---+    <LinearLayout
+---+        android:orientation="horizontal"
+---+        android:layout_width="match_parent"
+---+        android:layout_height="wrap_content"
+---+        android:layout_gravity="center_horizontal">
+---+
+---+        <Button
+---+            android:id="@+id/save_table"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text="  Save Table  "
+---+            />
+---+
+---+        <TextView
+---+            android:id="@+id/stat_table"
+---+            android:layout_width="wrap_content"
+---+            android:layout_height="wrap_content"
+---+            android:text="Save Status"
+---+            />
+---+    </LinearLayout>
+---+
+--- 
+--- </LinearLayout>
+---diff --git a/app/src/main/res/values/arrays.xml b/app/src/main/res/values/arrays.xml
+---index a6b3dae..68f5f5d 100644
+------ a/app/src/main/res/values/arrays.xml
+---+++ b/app/src/main/res/values/arrays.xml
+---@@ -1,2 +1,40 @@
+--- <?xml version="1.0" encoding="utf-8"?>
+----<resources></resources>
+---\ No newline at end of file
+---+<resources>
+---+
+---+    <string-array name="fragment_array_entries">
+---+        <item>Conversation</item>
+---+        <item>Contacts</item>
+---+        <item>None</item>
+---+    </string-array>
+---+
+---+    <string-array name="fragment_array_entryvalues">
+---+        <item>Conversation</item>
+---+        <item>Contacts</item>
+---+        <item>None</item>
+---+    </string-array>
+---+
+---+    <string-array name="listen_array_entries">
+---+        <item>French</item>
+---+        <item>English</item>
+---+        <item>Auto</item>
+---+    </string-array>
+---+
+---+    <string-array name="listen_array_entryvalues">
+---+        <item>FR</item>
+---+        <item>EN</item>
+---+        <item>Auto</item>
+---+    </string-array>
+---+
+---+    <string-array name="speak_array_entries">
+---+        <item>French</item>
+---+        <item>English</item>
+---+        <item>Auto</item>
+---+    </string-array>
+---+
+---+    <string-array name="speak_array_entryvalues">
+---+        <item>FR</item>
+---+        <item>EN</item>
+---+        <item>Auto</item>
+---+    </string-array>
+---+
+---+</resources>
+---diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+---index 1381fe9..d01dd11 100644
+------ a/app/src/main/res/values/strings.xml
+---+++ b/app/src/main/res/values/strings.xml
+---@@ -5,6 +5,7 @@
+---     <string name="navigation_drawer_close">Close navigation drawer</string>
+--- 
+---     <string name="action_settings">Settings</string>
+---+    <string name="activity_settings">Settings</string>
+--- 
+---     <string name="activity_contacts_list">Contacts List</string>
+---     <string name="activity_contact_detail">Contact Detail</string>
+---diff --git a/app/src/main/res/xml/preferences.xml b/app/src/main/res/xml/preferences.xml
+---index 624ed13..a484a30 100644
+------ a/app/src/main/res/xml/preferences.xml
+---+++ b/app/src/main/res/xml/preferences.xml
+---@@ -1,4 +1,57 @@
+--- <?xml version="1.0" encoding="utf-8"?>
+--- <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+--- 
+----</PreferenceScreen>
+---\ No newline at end of file
+---+    <PreferenceCategory
+---+        android:title="Module Main"
+---+        android:key="pref_key_main_settings">
+---+        <ListPreference
+---+            android:key="pref_key_default_language"
+---+            android:entries="@array/listen_array_entries"
+---+            android:entryValues="@array/listen_array_entryvalues"
+---+            android:summary="Language used to display to the user"
+---+            android:title="Display Language"
+---+            android:defaultValue="FR"/>
+---+        <ListPreference
+---+            android:key="pref_key_default_fragment"
+---+            android:entries="@array/fragment_array_entries"
+---+            android:entryValues="@array/fragment_array_entryvalues"
+---+            android:summary="Fragment to start on opening"
+---+            android:title="Default Fragment"
+---+            android:defaultValue="Conversation"/>
+---+    </PreferenceCategory>
+---+
+---+    <PreferenceCategory
+---+        android:title="Module Conversation"
+---+        android:key="pref_key_conversation_settings">
+---+        <CheckBoxPreference
+---+            android:key="pref_key_auto_listen"
+---+            android:summary="Determine if the listen function is looping"
+---+            android:title="Automatic loop"
+---+            android:defaultValue="false" />
+---+        <ListPreference
+---+            android:key="pref_key_listen_language"
+---+            android:entries="@array/listen_array_entries"
+---+            android:entryValues="@array/listen_array_entryvalues"
+---+            android:summary="Language used to listen to the user"
+---+            android:title="Listen Language"
+---+            android:defaultValue="FR"/>
+---+        <ListPreference
+---+            android:key="pref_key_speak_language"
+---+            android:entries="@array/speak_array_entries"
+---+            android:entryValues="@array/speak_array_entryvalues"
+---+            android:summary="Language used to pronounce text to speak"
+---+            android:title="Speak Language"
+---+            android:defaultValue="FR"/>
+---+    </PreferenceCategory>
+---+
+---+    <PreferenceCategory
+---+        android:title="Module Contacts"
+---+        android:key="pref_key_contacts_settings">
+---+        <CheckBoxPreference
+---+            android:key="pref_key_starred"
+---+            android:summary="Determine if the list contains only starred"
+---+            android:title="Starred"
+---+            android:defaultValue="true" />
+---+    </PreferenceCategory>
+---+
+---+</PreferenceScreen>

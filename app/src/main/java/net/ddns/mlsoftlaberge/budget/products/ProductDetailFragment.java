@@ -138,6 +138,12 @@ public class ProductDetailFragment extends Fragment {
         }
     }
 
+	public void setProduct(Uri uri) {
+		if(uri!=null) {
+			fillData(uri);
+		}
+	}
+
 	private void fillData(Uri uri) {
 		String[] projection = { ProductTable.COLUMN_NAME,ProductTable.COLUMN_UPC,
 				ProductTable.COLUMN_DESCRIPTION, ProductTable.COLUMN_CATEGORY };
