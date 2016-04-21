@@ -138,13 +138,14 @@ public class ProductDetailFragment extends Fragment {
         }
     }
 
+    // public method to reload and redisplay a product
 	public void setProduct(Uri uri) {
-		if(uri!=null) {
-			fillData(uri);
-		}
+		productUri=uri;
+        fillData(uri);
 	}
 
 	private void fillData(Uri uri) {
+		if(uri==null) return;
 		String[] projection = { ProductTable.COLUMN_NAME,ProductTable.COLUMN_UPC,
 				ProductTable.COLUMN_DESCRIPTION, ProductTable.COLUMN_CATEGORY };
         Cursor cursor = getActivity().getContentResolver().query(uri, projection, null, null,

@@ -2,18 +2,28 @@
 <resources>
 
     <string-array name="fragment_array_entries">
+        <item>Budget</item>
+        <item>Notes</item>
         <item>Conversation</item>
+        <item>Discussion</item>
+        <item>Perroquet</item>
         <item>Contacts</item>
         <item>Products</item>
         <item>Trycorder</item>
+        <item>Settings</item>
         <item>None</item>
     </string-array>
 
     <string-array name="fragment_array_entryvalues">
+        <item>Budget</item>
+        <item>Notes</item>
         <item>Conversation</item>
+        <item>Discussion</item>
+        <item>Perroquet</item>
         <item>Contacts</item>
         <item>Products</item>
         <item>Trycorder</item>
+        <item>Settings</item>
         <item>None</item>
     </string-array>
 

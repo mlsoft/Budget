@@ -1,5 +1,6 @@
 package net.ddns.mlsoftlaberge.budget;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -21,6 +22,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.LinearLayout;
 
 import net.ddns.mlsoftlaberge.budget.contacts.ContactAdminFragment;
 import net.ddns.mlsoftlaberge.budget.contacts.ContactsListFragment;
@@ -45,11 +49,29 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "MainActivity";
 
+    // =====================================================================================
     // preferences values loaded at start
     private boolean tabbedMode;
     private String defaultLanguage;
     private String defaultFragment;
 
+    // =====================================================================================
+    // fragments holders to keep them in memory
+    private NotesFragment notesFragment = null;
+    private BudgetFragment budgetFragment = null;
+    private PerroquetFragment perroquetFragment = null;
+    private DiscussionFragment discussionFragment = null;
+    private ConversationFragment conversationFragment = null;
+    private ContactsListFragment contactslistFragment = null;
+    private ContactAdminFragment contactadminFragment = null;
+    private ProductsListFragment productslistFragment = null;
+    private ProductDetailFragment productdetailFragment = null;
+    private int currentfragment = 0;
+    private Uri currentcontacturi = null;
+    private Uri currentproducturi = null;
+
+
+    // =====================================================================================
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -65,8 +87,11 @@ public class MainActivity extends AppCompatActivity
      */
     private ViewPager mViewPager;
 
-
+    // the tab layout holder
     private TabLayout tabLayout;
+
+    // will host fragment content when in drawer mode
+    private LinearLayout linLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,6 +141,8 @@ public class MainActivity extends AppCompatActivity
             // initialize the navigation menu
             NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
             navigationView.setNavigationItemSelectedListener(this);
+
+            linLayout = (LinearLayout) findViewById(R.id.main_content);
         }
 
         // prepare a floating button, but hide it for later purpose
@@ -129,37 +156,77 @@ public class MainActivity extends AppCompatActivity
         });
         fab.setVisibility(View.GONE);
 
+        autostart();
+    }
+
+    public void autostart() {
         // initiate the first menu item as auto-selected depending on settings
         if(tabbedMode) {
-            if (defaultFragment.equals("Conversation")) {
+            if (defaultFragment.equals("Budget")) {
+                mViewPager.setCurrentItem(0);
+            } else if (defaultFragment.equals("Notes")) {
+                    mViewPager.setCurrentItem(1);
+            } else if (defaultFragment.equals("Conversation")) {
                 mViewPager.setCurrentItem(2);
+            } else if (defaultFragment.equals("Discussion")) {
+                mViewPager.setCurrentItem(3);
+            } else if (defaultFragment.equals("Perroquet")) {
+                mViewPager.setCurrentItem(4);
             } else if (defaultFragment.equals("Contacts")) {
                 mViewPager.setCurrentItem(5);
             } else if (defaultFragment.equals("Products")) {
                 mViewPager.setCurrentItem(7);
             } else if (defaultFragment.equals("Trycorder")) {
                 trycorderactivity();
+            } else if (defaultFragment.equals("Settings")) {
+                settingsactivity();
             } else {
                 mViewPager.setCurrentItem(0);
             }
+            hideSoftKeyboard(mViewPager);
         } else {
-            if (defaultFragment.equals("Conversation")) {
+            if (defaultFragment.equals("Budget")) {
+                budgetfragment();
+            } else if (defaultFragment.equals("Notes")) {
+                notesfragment();
+            } else if (defaultFragment.equals("Conversation")) {
                 conversationfragment();
+            } else if (defaultFragment.equals("Discussion")) {
+                discussionfragment();
+            } else if (defaultFragment.equals("Perroquet")) {
+                perroquetfragment();
             } else if (defaultFragment.equals("Contacts")) {
                 contactslistfragment();
             } else if (defaultFragment.equals("Products")) {
-                inventoryfragment();
+                productslistFragment();
             } else if (defaultFragment.equals("Trycorder")) {
                 trycorderactivity();
+            } else if (defaultFragment.equals("Settings")) {
+                settingsactivity();
             } else {
                 budgetfragment();
             }
+            hideSoftKeyboard(linLayout);
+        }
+    }
+
+    public void hideSoftKeyboard(View view){
+        InputMethodManager imm =(InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+
+    public void showSoftKeyboard(View view){
+        if(view.requestFocus()){
+            InputMethodManager imm =(InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(view,InputMethodManager.SHOW_IMPLICIT);
         }
     }
 
     // =====================================================================================
     // section for tabbed mode
     // =====================================================================================
+
+    private int pagePosition=0;
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
@@ -169,6 +236,20 @@ public class MainActivity extends AppCompatActivity
 
         public SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
+        }
+
+        @Override
+        public void setPrimaryItem(ViewGroup container, int position, Object object) {
+            super.setPrimaryItem(container,position,object);
+            pagePosition=position;
+            if(pagePosition==6) {
+                if (contactadminFragment != null)
+                    contactadminFragment.setContact(currentcontacturi);
+            }
+            if(pagePosition==8) {
+                if (productdetailFragment != null)
+                    productdetailFragment.setProduct(currentproducturi);
+            }
         }
 
         @Override
@@ -197,8 +278,8 @@ public class MainActivity extends AppCompatActivity
                 contactadminFragment = new ContactAdminFragment();
                 return contactadminFragment;
             } else if(position==7) {
-                inventoryFragment = new ProductsListFragment();
-                return inventoryFragment;
+                productslistFragment = new ProductsListFragment();
+                return productslistFragment;
             } else if(position==8) {
                 productdetailFragment = new ProductDetailFragment();
                 return productdetailFragment;
@@ -243,25 +324,17 @@ public class MainActivity extends AppCompatActivity
     // section common for drawer and tabbed modes
     // =====================================================================================
 
-    // =====================================================================================
-    // fragments holders to keep them in memory
-    private NotesFragment notesFragment = null;
-    private BudgetFragment budgetFragment = null;
-    private PerroquetFragment perroquetFragment = null;
-    private DiscussionFragment discussionFragment = null;
-    private ConversationFragment conversationFragment = null;
-    private ContactsListFragment contactslistFragment = null;
-    private ContactAdminFragment contactadminFragment = null;
-    private ProductsListFragment inventoryFragment = null;
-    private ProductDetailFragment productdetailFragment = null;
-    private int currentfragment = 0;
-    private Uri currentcontacturi = null;
-    private Uri currentproducturi = null;
-
     @Override
     public void onBackPressed() {
         if(tabbedMode) {
-            super.onBackPressed();
+            int tabno = mViewPager.getCurrentItem();
+            if(tabno==8) {
+                mViewPager.setCurrentItem(7);
+            } else if(tabno==6) {
+                mViewPager.setCurrentItem(5);
+            } else {
+                super.onBackPressed();
+            }
             return;
         }
         // to do only in drawer mode
@@ -272,7 +345,7 @@ public class MainActivity extends AppCompatActivity
             if (currentfragment == 4) {
                 contactslistfragment();
             } else if (currentfragment == 6) {
-                inventoryfragment();
+                productslistFragment();
             } else {
                 super.onBackPressed();
             }
@@ -399,7 +472,7 @@ public class MainActivity extends AppCompatActivity
         if(tabbedMode) {
             mViewPager.setCurrentItem(7);
         } else {
-            inventoryfragment();
+            productslistFragment();
         }
     }
 
@@ -445,7 +518,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_contact) {
             contactadminfragment(null);
         } else if (id == R.id.nav_inventory) {
-            inventoryfragment();
+            productslistFragment();
         } else if (id == R.id.nav_product) {
             productfragment(null);
         } else if (id == R.id.nav_share) {
@@ -534,19 +607,19 @@ public class MainActivity extends AppCompatActivity
 
     // =====================================================================================
 
-    public void inventoryfragment() {
+    public void productslistFragment() {
         setTitle("Products List");
-        if (inventoryFragment == null) {
+        if (productslistFragment == null) {
             // Create a new Fragment to be placed in the activity layout
-            inventoryFragment = new ProductsListFragment();
+            productslistFragment = new ProductsListFragment();
             // In case this activity was started with special instructions from an
             // Intent, pass the Intent's extras to the fragment as arguments
-            inventoryFragment.setArguments(getIntent().getExtras());
+            productslistFragment.setArguments(getIntent().getExtras());
         }
 
         // Add the fragment to the 'fragment_container' FrameLayout
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.main_content, inventoryFragment).commit();
+                .replace(R.id.main_content, productslistFragment).commit();
         currentfragment = 5;
     }
 
