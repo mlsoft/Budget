@@ -59,7 +59,7 @@
                 android:value=".MainActivity" />
         </activity>
         <activity
-            android:name=".utils.SettingsActivity"
+            android:name=".settings.SettingsActivity"
             android:label="@string/activity_settings"
             android:parentActivityName=".MainActivity">
             <!-- Define hierarchical parent of this activity, both via the system
