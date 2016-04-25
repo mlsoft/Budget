@@ -1,4 +1,4 @@
-package net.ddns.mlsoftlaberge.budget.utils;
+package net.ddns.mlsoftlaberge.budget.settings;
 
 import android.app.Activity;
 import android.os.Bundle;

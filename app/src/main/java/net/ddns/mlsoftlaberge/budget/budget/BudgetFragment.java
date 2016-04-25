@@ -1,4 +1,4 @@
-package net.ddns.mlsoftlaberge.budget.utils;
+package net.ddns.mlsoftlaberge.budget.budget;
 
 import android.support.v4.app.Fragment;
 import android.os.Bundle;

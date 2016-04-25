@@ -30,11 +30,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="Last Speech"
         android:hint="Last speech"
         android:windowSoftInputMode="stateAlwaysHidden"
         android:imeOptions="actionDone"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:focusable="true" />
 
 
     <TextView

@@ -36,8 +36,8 @@ import net.ddns.mlsoftlaberge.budget.speech.ConversationFragment;
 import net.ddns.mlsoftlaberge.budget.speech.PerroquetFragment;
 import net.ddns.mlsoftlaberge.budget.speech.DiscussionFragment;
 import net.ddns.mlsoftlaberge.budget.trycorder.TrycorderActivity;
-import net.ddns.mlsoftlaberge.budget.utils.BudgetFragment;
-import net.ddns.mlsoftlaberge.budget.utils.SettingsActivity;
+import net.ddns.mlsoftlaberge.budget.budget.BudgetFragment;
+import net.ddns.mlsoftlaberge.budget.settings.SettingsActivity;
 
 public class MainActivity extends AppCompatActivity
         implements ContactsListFragment.OnContactsInteractionListener,
@@ -156,6 +156,11 @@ public class MainActivity extends AppCompatActivity
         });
         fab.setVisibility(View.GONE);
 
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
         autostart();
     }
 
