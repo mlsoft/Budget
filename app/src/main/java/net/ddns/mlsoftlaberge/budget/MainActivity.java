@@ -27,6 +27,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 
 import net.ddns.mlsoftlaberge.budget.contacts.ContactAdminFragment;
+import net.ddns.mlsoftlaberge.budget.contacts.ContactsBudgetFragment;
 import net.ddns.mlsoftlaberge.budget.contacts.ContactsListFragment;
 import net.ddns.mlsoftlaberge.budget.notes.NotesEditFragment;
 import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity
     // fragments holders to keep them in memory
     private NotesFragment notesFragment = null;
     private BudgetFragment budgetFragment = null;
+    private ContactsBudgetFragment contactsbudgetFragment = null;
     private PerroquetFragment perroquetFragment = null;
     private DiscussionFragment discussionFragment = null;
     private ConversationFragment conversationFragment = null;
@@ -181,6 +183,8 @@ public class MainActivity extends AppCompatActivity
                 mViewPager.setCurrentItem(5);
             } else if (defaultFragment.equals("Products")) {
                 mViewPager.setCurrentItem(7);
+            } else if (defaultFragment.equals("CBudget")) {
+                mViewPager.setCurrentItem(9);
             } else if (defaultFragment.equals("Trycorder")) {
                 trycorderactivity();
             } else if (defaultFragment.equals("Settings")) {
@@ -204,6 +208,8 @@ public class MainActivity extends AppCompatActivity
                 contactslistfragment();
             } else if (defaultFragment.equals("Products")) {
                 productslistFragment();
+            } else if (defaultFragment.equals("CBudget")) {
+                contactsbudgetfragment();
             } else if (defaultFragment.equals("Trycorder")) {
                 trycorderactivity();
             } else if (defaultFragment.equals("Settings")) {
@@ -288,6 +294,9 @@ public class MainActivity extends AppCompatActivity
             } else if(position==8) {
                 productdetailFragment = new ProductDetailFragment();
                 return productdetailFragment;
+            } else if(position==9) {
+                contactsbudgetFragment = new ContactsBudgetFragment();
+                return contactsbudgetFragment;
             }
             budgetFragment = new BudgetFragment();
             return budgetFragment;
@@ -295,8 +304,8 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         public int getCount() {
-            // Show 9 total pages.
-            return 9;
+            // Show 10 total pages.
+            return 10;
         }
 
         @Override
@@ -320,6 +329,8 @@ public class MainActivity extends AppCompatActivity
                     return "Inventaire";
                 case 8:
                     return "Produit";
+                case 9:
+                    return "CBudget";
             }
             return null;
         }
@@ -526,6 +537,8 @@ public class MainActivity extends AppCompatActivity
             productslistFragment();
         } else if (id == R.id.nav_product) {
             productfragment(null);
+        } else if (id == R.id.nav_contactsbudget) {
+            contactsbudgetfragment();
         } else if (id == R.id.nav_share) {
 
         } else if (id == R.id.nav_send) {
@@ -708,6 +721,25 @@ public class MainActivity extends AppCompatActivity
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.main_content, conversationFragment).commit();
         currentfragment = 9;
+    }
+
+    // =====================================================================================
+    // conversation fragment incorporation in the display
+    public void contactsbudgetfragment() {
+        setTitle("Contacts Budget Fragment");
+
+        if (contactsbudgetFragment == null) {
+            // Create a new Fragment to be placed in the activity layout
+            contactsbudgetFragment = new ContactsBudgetFragment();
+            // In case this activity was started with special instructions from an
+            // Intent, pass the Intent's extras to the fragment as arguments
+            contactsbudgetFragment.setArguments(getIntent().getExtras());
+        }
+
+        // Add the fragment to the 'fragment_container' FrameLayout
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main_content, contactsbudgetFragment).commit();
+        currentfragment = 10;
     }
 
 

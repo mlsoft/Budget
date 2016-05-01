@@ -1,13 +1,168 @@
-diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index 11ec7ff..e52731c 100644
---- a/app/src/main/AndroidManifest.xml
-+++ b/app/src/main/AndroidManifest.xml
-@@ -59,7 +59,7 @@
-                 android:value=".MainActivity" />
-         </activity>
-         <activity
--            android:name=".utils.SettingsActivity"
-+            android:name=".settings.SettingsActivity"
-             android:label="@string/activity_settings"
-             android:parentActivityName=".MainActivity">
-             <!-- Define hierarchical parent of this activity, both via the system
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index 5d19981..fbb6828 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -37,7 +37,7 @@
+     <ConfirmationsSetting value="0" id="Add" />
+     <ConfirmationsSetting value="0" id="Remove" />
+   </component>
+-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_7" default="true" assert-keyword="true" jdk-15="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="true" assert-keyword="true" jdk-15="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+     <output url="file://$PROJECT_DIR$/build/classes" />
+   </component>
+   <component name="ProjectType">
+diff --git a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+index b8c25da..83bdb03 100644
+--- a/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
++++ b/app/src/main/java/net/ddns/mlsoftlaberge/budget/MainActivity.java
+@@ -27,6 +27,7 @@ import android.view.inputmethod.InputMethodManager;
+ import android.widget.LinearLayout;
+ 
+ import net.ddns.mlsoftlaberge.budget.contacts.ContactAdminFragment;
++import net.ddns.mlsoftlaberge.budget.contacts.ContactsBudgetFragment;
+ import net.ddns.mlsoftlaberge.budget.contacts.ContactsListFragment;
+ import net.ddns.mlsoftlaberge.budget.notes.NotesEditFragment;
+ import net.ddns.mlsoftlaberge.budget.notes.NotesFragment;
+@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity
+     // fragments holders to keep them in memory
+     private NotesFragment notesFragment = null;
+     private BudgetFragment budgetFragment = null;
++    private ContactsBudgetFragment contactsbudgetFragment = null;
+     private PerroquetFragment perroquetFragment = null;
+     private DiscussionFragment discussionFragment = null;
+     private ConversationFragment conversationFragment = null;
+@@ -181,6 +183,8 @@ public class MainActivity extends AppCompatActivity
+                 mViewPager.setCurrentItem(5);
+             } else if (defaultFragment.equals("Products")) {
+                 mViewPager.setCurrentItem(7);
++            } else if (defaultFragment.equals("CBudget")) {
++                mViewPager.setCurrentItem(9);
+             } else if (defaultFragment.equals("Trycorder")) {
+                 trycorderactivity();
+             } else if (defaultFragment.equals("Settings")) {
+@@ -204,6 +208,8 @@ public class MainActivity extends AppCompatActivity
+                 contactslistfragment();
+             } else if (defaultFragment.equals("Products")) {
+                 productslistFragment();
++            } else if (defaultFragment.equals("CBudget")) {
++                contactsbudgetfragment();
+             } else if (defaultFragment.equals("Trycorder")) {
+                 trycorderactivity();
+             } else if (defaultFragment.equals("Settings")) {
+@@ -288,6 +294,9 @@ public class MainActivity extends AppCompatActivity
+             } else if(position==8) {
+                 productdetailFragment = new ProductDetailFragment();
+                 return productdetailFragment;
++            } else if(position==9) {
++                contactsbudgetFragment = new ContactsBudgetFragment();
++                return contactsbudgetFragment;
+             }
+             budgetFragment = new BudgetFragment();
+             return budgetFragment;
+@@ -295,8 +304,8 @@ public class MainActivity extends AppCompatActivity
+ 
+         @Override
+         public int getCount() {
+-            // Show 9 total pages.
+-            return 9;
++            // Show 10 total pages.
++            return 10;
+         }
+ 
+         @Override
+@@ -320,6 +329,8 @@ public class MainActivity extends AppCompatActivity
+                     return "Inventaire";
+                 case 8:
+                     return "Produit";
++                case 9:
++                    return "CBudget";
+             }
+             return null;
+         }
+@@ -526,6 +537,8 @@ public class MainActivity extends AppCompatActivity
+             productslistFragment();
+         } else if (id == R.id.nav_product) {
+             productfragment(null);
++        } else if (id == R.id.nav_contactsbudget) {
++            contactsbudgetfragment();
+         } else if (id == R.id.nav_share) {
+ 
+         } else if (id == R.id.nav_send) {
+@@ -710,5 +723,24 @@ public class MainActivity extends AppCompatActivity
+         currentfragment = 9;
+     }
+ 
++    // =====================================================================================
++    // conversation fragment incorporation in the display
++    public void contactsbudgetfragment() {
++        setTitle("Contacts Budget Fragment");
++
++        if (contactsbudgetFragment == null) {
++            // Create a new Fragment to be placed in the activity layout
++            contactsbudgetFragment = new ContactsBudgetFragment();
++            // In case this activity was started with special instructions from an
++            // Intent, pass the Intent's extras to the fragment as arguments
++            contactsbudgetFragment.setArguments(getIntent().getExtras());
++        }
++
++        // Add the fragment to the 'fragment_container' FrameLayout
++        getSupportFragmentManager().beginTransaction()
++                .replace(R.id.main_content, contactsbudgetFragment).commit();
++        currentfragment = 10;
++    }
++
+ 
+ }
+diff --git a/app/src/main/res/menu/activity_main_drawer.xml b/app/src/main/res/menu/activity_main_drawer.xml
+index 78df891..74b55b3 100644
+--- a/app/src/main/res/menu/activity_main_drawer.xml
++++ b/app/src/main/res/menu/activity_main_drawer.xml
+@@ -42,6 +42,10 @@
+             android:id="@+id/nav_product"
+             android:icon="@drawable/ic_menu_manage"
+             android:title="Product" />
++        <item
++            android:id="@+id/nav_contactsbudget"
++            android:icon="@drawable/ic_menu_manage"
++            android:title="CBudget" />
+     </group>
+ 
+     <item android:title="Communicate">
+diff --git a/app/src/main/res/values/arrays.xml b/app/src/main/res/values/arrays.xml
+index 850935c..5413175 100644
+--- a/app/src/main/res/values/arrays.xml
++++ b/app/src/main/res/values/arrays.xml
+@@ -9,6 +9,7 @@
+         <item>Perroquet</item>
+         <item>Contacts</item>
+         <item>Products</item>
++        <item>CBudget</item>
+         <item>Trycorder</item>
+         <item>Settings</item>
+         <item>None</item>
+@@ -22,6 +23,7 @@
+         <item>Perroquet</item>
+         <item>Contacts</item>
+         <item>Products</item>
++        <item>CBudget</item>
+         <item>Trycorder</item>
+         <item>Settings</item>
+         <item>None</item>
+diff --git a/gitdiff.txt b/gitdiff.txt
+index b03b170..decb5fa 100644
+--- a/gitdiff.txt
++++ b/gitdiff.txt
+@@ -1,13 +0,0 @@
+-diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+-index 11ec7ff..e52731c 100644
+---- a/app/src/main/AndroidManifest.xml
+-+++ b/app/src/main/AndroidManifest.xml
+-@@ -59,7 +59,7 @@
+-                 android:value=".MainActivity" />
+-         </activity>
+-         <activity
+--            android:name=".utils.SettingsActivity"
+-+            android:name=".settings.SettingsActivity"
+-             android:label="@string/activity_settings"
+-             android:parentActivityName=".MainActivity">
+-             <!-- Define hierarchical parent of this activity, both via the system

@@ -42,6 +42,10 @@
             android:id="@+id/nav_product"
             android:icon="@drawable/ic_menu_manage"
             android:title="Product" />
+        <item
+            android:id="@+id/nav_contactsbudget"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="CBudget" />
     </group>
 
     <item android:title="Communicate">
